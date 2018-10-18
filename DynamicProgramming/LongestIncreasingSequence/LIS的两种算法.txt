@@ -1,0 +1,30 @@
+法一：O(n^2)
+
+int LIS(int *a,int n)
+{
+	int ans=0;
+	for(int i=1;i<=n;i++)
+	{
+		f[i]=1;
+		for(int j=1;j<i;j++)
+			if(a[i]<a[j]) f[i]=max(f[i],f[j]+1);
+		ans=max(ans,f[i]);
+	}
+	return ans;
+}
+
+
+法二：O(n log n)
+
+int LIS(int *a,int n)
+{
+	int ans=0;
+	for(int i=1;i<=n;i++) g[i]=0x7fffffff;
+	for(int i=1;i<=n;i++)
+	{
+		int p=lower_bound(g+1,g+1+n,a[i])-g;
+		ans=max(ans,p);
+		g[p]=min(g[p],a[i]);
+	}
+	return ans;
+}

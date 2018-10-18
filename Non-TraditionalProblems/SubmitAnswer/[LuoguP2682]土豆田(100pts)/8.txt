@@ -1,0 +1,257 @@
+1 1
+254
+in
+set tmp
+add -1
+if key
+goto 9
+set 1
+out
+end
+add -1
+if key
+goto 15
+set 2
+out
+end
+add -1
+if key
+goto 21
+set 3
+out
+end
+add -1
+if key
+goto 27
+set 5
+out
+end
+add -1
+if key
+goto 33
+set 8
+out
+end
+add -1
+if key
+goto 39
+set 13
+out
+end
+add -1
+if key
+goto 45
+set 21
+out
+end
+add -1
+if key
+goto 51
+set 34
+out
+end
+add -1
+if key
+goto 57
+set 55
+out
+end
+add -1
+if key
+goto 63
+set 89
+out
+end
+add -1
+if key
+goto 69
+set 144
+out
+end
+add -1
+if key
+goto 75
+set 233
+out
+end
+add -1
+if key
+goto 81
+set 377
+out
+end
+add -1
+if key
+goto 87
+set 610
+out
+end
+add -1
+if key
+goto 93
+set 987
+out
+end
+add -1
+if key
+goto 99
+set 1597
+out
+end
+add -1
+if key
+goto 105
+set 2584
+out
+end
+add -1
+if key
+goto 111
+set 4181
+out
+end
+add -1
+if key
+goto 117
+set 6765
+out
+end
+add -1
+if key
+goto 123
+set 10946
+out
+end
+add -1
+if key
+goto 129
+set 17711
+out
+end
+add -1
+if key
+goto 135
+set 28657
+out
+end
+add -1
+if key
+goto 141
+set 46368
+out
+end
+add -1
+if key
+goto 147
+set 75025
+out
+end
+add -1
+if key
+goto 153
+set 121393
+out
+end
+add -1
+if key
+goto 159
+set 196418
+out
+end
+add -1
+if key
+goto 165
+set 317811
+out
+end
+add -1
+if key
+goto 171
+set 514229
+out
+end
+add -1
+if key
+goto 177
+set 832040
+out
+end
+add -1
+if key
+goto 183
+set 1346269
+out
+end
+add -1
+if key
+goto 189
+set 2178309
+out
+end
+add -1
+if key
+goto 195
+set 3524578
+out
+end
+add -1
+if key
+goto 201
+set 5702887
+out
+end
+add -1
+if key
+goto 207
+set 9227465
+out
+end
+add -1
+if key
+goto 213
+set 14930352
+out
+end
+add -1
+if key
+goto 219
+set 24157817
+out
+end
+add -1
+if key
+goto 225
+set 39088169
+out
+end
+add -1
+if key
+goto 231
+set 63245986
+out
+end
+add -1
+if key
+goto 237
+set 102334155
+out
+end
+add -1
+if key
+goto 243
+set 165580141
+out
+end
+add -1
+if key
+goto 249
+set 267914296
+out
+end
+add -1
+if key
+goto 255
+set 433494437
+out
+end
+

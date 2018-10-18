@@ -1,0 +1,35 @@
+2 2
+7
+in
+swap
+L 7
+wait
+wait
+get r
+add tmp
+5
+set 0
+get l
+add tmp
+L 2
+add tmp
+8
+set 0
+get u
+add tmp
+L 2
+add tmp
+L 4
+get u
+add tmp
+10
+wait
+wait
+wait
+wait
+get u
+swap
+L 2
+get l
+add tmp
+out

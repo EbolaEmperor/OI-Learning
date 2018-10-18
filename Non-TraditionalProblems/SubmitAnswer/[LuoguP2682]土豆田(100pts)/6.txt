@@ -1,0 +1,41 @@
+1 2
+18
+in
+swap
+R 1
+and 1431655765
+set 858993459
+get r
+and tmp
+get r
+add tmp
+R 4
+and 252645135
+set 16711935
+get r
+and tmp
+get r
+add tmp
+R 16
+and 65535
+20
+set 1431655765
+get l
+and tmp
+get l
+add tmp
+R 2
+and 858993459
+set 252645135
+get l
+and tmp
+get l
+add tmp
+R 8
+and 16711935
+set 65535
+get l
+and tmp
+get l
+add tmp
+out

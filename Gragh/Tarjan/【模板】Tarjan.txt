@@ -1,0 +1,28 @@
+const int N=10010,M=500010;
+struct Edge{int to,capa;} e[M];
+int h[N],sum=0;
+int pre[N],low[N],dfn=0;
+int scc[N],cnt=0;
+stack<int> sta;
+
+void Tarjan(int u)
+{
+	pre[u]=low[u]=++dfn;
+	sta.push(u);
+	for(int tmp=h[u];tmp;tmp=e[tmp].next)
+		if(!pre[e[tmp].to])
+		{
+			Tarjan(e[tmp].to);
+			low[u]=min(low[u],low[e[tmp].to]);
+		}
+		else if(!scc[e[tmp].to]) low[u]=min(low[u],pre[e[tmp].to]);
+	if(pre[u]==low[u])
+	{
+		int o;cnt++;
+		do{
+			o=sta.top();
+			scc[o]=cnt;
+			sta.pop();
+		}while(o!=u);
+	}
+}

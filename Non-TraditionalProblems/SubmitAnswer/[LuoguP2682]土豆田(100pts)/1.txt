@@ -1,0 +1,11 @@
+1 2
+3
+in
+swap
+opp
+5
+in
+swap
+get l
+add tmp
+out

@@ -1,0 +1,288 @@
+4 2
+32
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+
+34
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+get l
+add tmp
+
+32
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+
+39
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+get l
+add tmp
+get u
+add tmp
+get d
+add tmp
+out
+
+32
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+
+36
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+get l
+add tmp
+get d
+add tmp
+
+32
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+
+34
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+in
+add tmp
+get l
+add tmp
+

@@ -1,0 +1,15 @@
+1 2
+5
+in
+swap
+get r
+xor tmp
+R 1
+7
+in
+swap
+get l
+and tmp
+get l
+add tmp
+out

@@ -1,0 +1,9 @@
+1 1
+7
+in
+set tmp
+R 31
+swap
+add tmp
+xor tmp
+out
