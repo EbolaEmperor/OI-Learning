@@ -45,7 +45,7 @@ int main()
         int x=find(a[i]),y=find(b[i]);
         if(x!=y) fa[x]=y,sz[y]+=sz[x];
     }
-    if(a[n]==b[n]) sz[find(a[n])]++;
+    if(a[n]==b[n]&&sz[find(a[n])]==1) ans++;
     for(int i=1;i<=n;i++) ans+=(fa[i]==i&&sz[i]>1);
     cout<<ans-1<<endl;
     return 0;
