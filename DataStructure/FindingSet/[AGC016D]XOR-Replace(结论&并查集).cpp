@@ -34,8 +34,6 @@ int main()
     for(int i=1;i<=n;i++) if(_a[i]!=_b[i]) return !puts("-1");
     for(int i=1;i<n;i++) ans+=(a[i]!=b[i]);
     if(ans==0) return !puts("0");
-    for(int i=1;i<=n;i++) _a[i+n]=_b[i];
-    sort(_a+1,_a+1+n);
     int hs=unique(_a+1,_a+1+n)-(_a+1);
     for(int i=1;i<=hs;i++) fa[i]=i,sz[i]=1;
     for(int i=1;i<=n;i++)
