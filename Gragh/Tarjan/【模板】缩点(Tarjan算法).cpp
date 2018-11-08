@@ -1,87 +1,69 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-struct Edge{int to,next;} e[2][100010];
-int froms[100010],tos[100010],n,m;
-int h[2][10010],sum[2]={0};
-int pre[10010],low[10010],scc[10010];
-int ww[10010],w[10010];
-int f[10010];
-int dfs_clock,scc_size;
-stack<int> s;
-
-void add_edge(int u,int v,int ty)
-{
-	sum[ty]++;
-	e[ty][sum[ty]].to=v;
-	e[ty][sum[ty]].next=h[ty][u];
-	h[ty][u]=sum[ty];
-}
-
-void Tarjan(int u)
-{
-	pre[u]=low[u]=++dfs_clock;
-	s.push(u);
-	for(int tmp=h[0][u];tmp;tmp=e[0][tmp].next)
-		if(!pre[e[0][tmp].to])
-		{
-			Tarjan(e[0][tmp].to);
-			low[u]=min(low[u],low[e[0][tmp].to]);
-		}
-		else if(!scc[e[0][tmp].to]) low[u]=min(low[u],pre[e[0][tmp].to]);
-	if(pre[u]==low[u])
-	{
-		scc_size++;
-		int o;
-		int weigh=0;
-		do{
-			o=s.top();
-			s.pop();
-			weigh+=ww[o];
-			scc[o]=scc_size;
-		}while(o!=u);
-		w[scc_size]=weigh;
-	}
-}
-
-void find_scc()
-{
-	memset(pre,0,sizeof(pre));
-	memset(low,0,sizeof(low));
-	memset(scc,0,sizeof(scc));
-	dfs_clock=scc_size=0;
-	for(int i=1;i<=n;i++)
-		if(!pre[i]) Tarjan(i);
-}
+const int N=10010;
+vector<int> g1[N],g2[N];
+int n,m,pre[N],low[N],dfc=0;
+int scc[N],deg[N],tot=0;
+int a[N],val[N],f[N];
+stack<int> stk;
 
 void dfs(int u)
 {
-	if(f[u]) return;
-	f[u]=w[u];
-	int mxsum=0;
-	for(int tmp=h[1][u];tmp;tmp=e[1][tmp].next)
-	{
-		if(!f[e[1][tmp].to]) dfs(e[1][tmp].to);
-		mxsum=max(mxsum,f[e[1][tmp].to]);
-	}
-	f[u]+=mxsum;
+    stk.push(u);
+    pre[u]=low[u]=++dfc;
+    for(int i=0;i<g1[u].size();i++)
+    {
+        int v=g1[u][i];
+        if(!pre[v]) dfs(v),low[u]=min(low[u],low[v]);
+        else if(!scc[v]) low[u]=min(low[u],pre[v]);
+    }
+    if(low[u]==pre[u])
+    {
+        int o;tot++;
+        do{
+            o=stk.top();
+            scc[o]=tot;
+            val[tot]+=a[o];
+            stk.pop();
+        } while(o!=u);
+    }
+}
+
+void dp(int u)
+{
+    if(f[u]) return;
+    int mx=0;f[u]=val[u];
+    for(int i=0;i<g2[u].size();i++)
+    {
+        int v=g2[u][i];dp(v);
+        mx=max(mx,f[v]);
+    }
+    f[u]+=mx;
 }
 
 int main()
 {
-	cin>>n>>m;
-	for(int i=1;i<=n;i++) scanf("%d",ww+i);
-	for(int i=1;i<=m;i++)
-	{
-		scanf("%d%d",froms+i,tos+i);
-		add_edge(froms[i],tos[i],0);
-	}
-	find_scc();
-	for(int i=1;i<=m;i++)
-		if(scc[froms[i]]!=scc[tos[i]]) add_edge(scc[froms[i]],scc[tos[i]],1);
-	int ans=0;
-	for(int i=1;i<=scc_size;i++)
-		if(!f[i]) dfs(i),ans=max(ans,f[i]);
-	cout<<ans<<endl;
-	return 0;
+    int u,v;
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;i++) scanf("%d",a+i);
+    for(int i=1;i<=m;i++)
+    {
+        scanf("%d%d",&u,&v);
+        g1[u].push_back(v);
+    }
+    for(int i=1;i<=n;i++)
+        if(!pre[i]) dfs(i);
+    for(int i=1;i<=n;i++)
+        for(int j=0;j<g1[i].size();j++)
+        {
+            int v=g1[i][j];
+            if(scc[i]==scc[v]) continue;
+            g2[scc[i]].push_back(scc[v]);
+        }
+    int ans=0;
+    for(int i=1;i<=tot;i++)
+        if(!f[i]) dp(i),ans=max(ans,f[i]);
+    printf("%d\n",ans);
+    return 0;
 }
