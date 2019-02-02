@@ -1,0 +1,578 @@
+node 1
+read 0 a
+write a 273
+node 2
+read 0 a
+write a 54
+node 3
+read 0 a
+write a 97
+node 4
+read 0 a
+write a 790
+node 5
+read 0 a
+write a 277
+node 6
+read 0 a
+write a 821
+node 7
+read 0 a
+write a 53
+node 8
+read 0 a
+write a 881
+node 9
+read 0 a
+write a 82
+node 10
+read 0 a
+write a 763
+node 11
+read 0 a
+write a 562
+node 12
+read 0 a
+write a 90
+node 13
+read 0 a
+write a 469
+node 14
+read 0 a
+write a 537
+node 15
+read 0 a
+write a 81
+node 16
+read 0 a
+write a 915
+node 17
+read 0 a
+write a 620
+node 18
+read 0 a
+write a 96
+node 19
+read 0 a
+write a 524
+node 20
+read 0 a
+write a 401
+node 21
+read 0 a
+write a 319
+node 22
+read 0 a
+write a 188
+node 23
+read 0 a
+write a 912
+node 24
+read 0 a
+write a 677
+node 25
+read 0 a
+write a 74
+node 26
+read 0 a
+write a 57
+node 27
+read 0 a
+write a 790
+node 28
+read 0 a
+write a 255
+node 29
+read 0 a
+write a 93
+node 30
+read 0 a
+write a 553
+node 31
+read 0 a
+write a 303
+node 32
+read 0 a
+write a 53
+node 33
+read 0 a
+write a 619
+node 34
+read 0 a
+write a 917
+node 35
+read 0 a
+write a 237
+node 36
+read 0 a
+write a 567
+node 37
+read 0 a
+write a 618
+node 38
+read 0 a
+write a 864
+node 39
+read 0 a
+write a 745
+node 40
+read 0 a
+write a 74
+node 41
+read 0 a
+write a 249
+node 42
+read 0 a
+write a 975
+node 43
+read 0 a
+write a 346
+node 44
+read 0 a
+write a 595
+node 45
+read 0 a
+write a 786
+node 46
+read 0 a
+write a 214
+node 47
+read 0 a
+write a 410
+node 48
+read 0 a
+write a 768
+node 49
+read 0 a
+write a 564
+node 50
+read 0 a
+write a 297
+node 273
+read 1 a
+write a 770
+node 54
+read 2 a
+write a 0
+node 97
+read 3 a
+write a 0
+node 790
+read 4 a
+write a 100
+read 27 a
+write a 100
+node 277
+read 5 a
+write a 98
+node 821
+read 6 a
+write a 81
+node 53
+read 7 a
+write a 0
+read 32 a
+write a 0
+node 881
+read 8 a
+write a 15
+node 82
+read 9 a
+write a 0
+node 763
+read 10 a
+write a 91
+node 562
+read 11 a
+write a 66
+node 90
+read 12 a
+write a 0
+node 469
+read 13 a
+write a 611
+node 537
+read 14 a
+write a 924
+node 81
+read 15 a
+write a 0
+read 821 a
+write a 0
+node 915
+read 16 a
+write a 571
+node 620
+read 17 a
+write a 465
+node 96
+read 18 a
+write a 0
+node 524
+read 19 a
+write a 692
+node 401
+read 20 a
+write a 808
+node 319
+read 21 a
+write a 58
+node 188
+read 22 a
+write a 802
+node 912
+read 23 a
+write a 71
+node 677
+read 24 a
+write a 934
+node 74
+read 25 a
+write a 0
+read 40 a
+write a 0
+node 57
+read 26 a
+write a 0
+node 790
+read 4 a
+write a 100
+read 27 a
+write a 100
+node 255
+read 28 a
+write a 86
+node 93
+read 29 a
+write a 0
+node 553
+read 30 a
+write a 718
+node 303
+read 31 a
+write a 73
+node 53
+read 7 a
+write a 0
+read 32 a
+write a 0
+node 619
+read 33 a
+write a 98
+node 917
+read 34 a
+write a 68
+node 237
+read 35 a
+write a 91
+node 567
+read 36 a
+write a 449
+node 618
+read 37 a
+write a 89
+node 864
+read 38 a
+write a 934
+node 745
+read 39 a
+write a 78
+node 74
+read 25 a
+write a 0
+read 40 a
+write a 0
+node 249
+read 41 a
+write a 69
+node 975
+read 42 a
+write a 640
+node 346
+read 43 a
+write a 326
+node 595
+read 44 a
+write a 391
+node 786
+read 45 a
+write a 319
+node 214
+read 46 a
+write a 95
+node 410
+read 47 a
+write a 64
+node 768
+read 48 a
+write a 59
+node 564
+read 49 a
+write a 95
+node 297
+read 50 a
+write a 973
+node 770
+read 273 a
+write a 87
+node 100
+read 790 a
+write a 0
+read 790 a
+write a 0
+read 790 a
+write a 0
+read 790 a
+write a 0
+node 98
+read 277 a
+write a 0
+read 619 a
+write a 0
+node 81
+read 15 a
+write a 0
+read 821 a
+write a 0
+node 15
+read 0 a
+write a 81
+read 881 a
+write a 81
+node 91
+read 237 a
+write a 0
+read 763 a
+write a 0
+node 66
+read 562 a
+write a 0
+node 611
+read 469 a
+write a 55
+node 924
+read 537 a
+write a 70
+node 571
+read 915 a
+write a 84
+node 465
+read 620 a
+write a 29
+node 692
+read 524 a
+write a 104
+node 808
+read 401 a
+write a 61
+node 58
+read 319 a
+write a 0
+node 802
+read 188 a
+write a 85
+node 71
+read 912 a
+write a 0
+node 934
+read 677 a
+write a 97
+read 864 a
+write a 97
+node 100
+read 790 a
+write a 0
+read 790 a
+write a 0
+read 790 a
+write a 0
+read 790 a
+write a 0
+node 86
+read 255 a
+write a 0
+node 718
+read 553 a
+write a 56
+node 73
+read 303 a
+write a 0
+node 98
+read 277 a
+write a 0
+read 619 a
+write a 0
+node 68
+read 917 a
+write a 0
+node 91
+read 237 a
+write a 0
+read 763 a
+write a 0
+node 449
+read 567 a
+write a 66
+node 89
+read 618 a
+write a 0
+node 934
+read 677 a
+write a 97
+read 864 a
+write a 97
+node 78
+read 745 a
+write a 0
+node 69
+read 249 a
+write a 0
+node 640
+read 975 a
+write a 931
+node 326
+read 346 a
+write a 59
+node 391
+read 595 a
+write a 74
+node 319
+read 21 a
+write a 58
+read 786 a
+write a 58
+node 95
+read 214 a
+write a 0
+read 564 a
+write a 0
+node 64
+read 410 a
+write a 0
+node 59
+read 768 a
+write a 0
+read 326 a
+write a 0
+node 95
+read 214 a
+write a 0
+read 564 a
+write a 0
+node 973
+read 297 a
+write a 77
+node 87
+read 770 a
+write a 0
+node 81
+read 15 a
+write a 0
+read 15 a
+write a 0
+read 821 a
+write a 0
+read 15 a
+write a 0
+node 55
+read 611 a
+write a 0
+node 70
+read 924 a
+write a 0
+node 84
+read 571 a
+write a 0
+node 29
+read 0 a
+write a 93
+read 465 a
+write a 93
+node 104
+read 692 a
+write a 68
+node 61
+read 808 a
+write a 0
+node 85
+read 802 a
+write a 0
+node 97
+read 3 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+node 56
+read 718 a
+write a 0
+node 66
+read 562 a
+write a 0
+read 449 a
+write a 0
+node 97
+read 3 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+read 934 a
+write a 0
+node 931
+read 640 a
+write a 912
+node 59
+read 768 a
+write a 0
+read 326 a
+write a 0
+node 74
+read 25 a
+write a 0
+read 40 a
+write a 0
+read 391 a
+write a 0
+node 58
+read 319 a
+write a 0
+read 319 a
+write a 0
+read 319 a
+write a 0
+node 77
+read 973 a
+write a 0
+node 93
+read 29 a
+write a 0
+read 29 a
+write a 0
+read 29 a
+write a 0
+node 68
+read 917 a
+write a 0
+read 104 a
+write a 0
+node 912
+read 23 a
+write a 71
+read 931 a
+write a 71
+node 71
+read 912 a
+write a 0
+read 912 a
+write a 0
+read 912 a
+write a 0

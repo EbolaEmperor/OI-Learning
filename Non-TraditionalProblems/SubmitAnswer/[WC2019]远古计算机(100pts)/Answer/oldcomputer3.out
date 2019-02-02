@@ -1,0 +1,36 @@
+node 100
+read 80 a
+write a 0
+node 80
+read 98 a
+write a 100
+node 98
+read 56 a
+write a 80
+node 56
+read 37 a
+write a 98
+node 37
+read 36 a
+write a 56
+node 36
+read 50 a
+write a 37
+node 50
+read 40 a
+write a 36
+node 40
+read 54 a
+write a 50
+node 54
+read 13 a
+write a 40
+node 13
+read 7 a
+write a 54
+node 7
+read 1 a
+write a 13
+node 1
+read 0 a
+write a 7
