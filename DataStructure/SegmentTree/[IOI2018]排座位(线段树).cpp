@@ -41,7 +41,7 @@ void update(int o,int l,int r,int nl,int nr,int x)
 
 void gao(int x,int y,int d)
 {
-    int minv=h*w+1,val[4],tot=0;
+    int minv=h*w,val[4],tot=0;
     if(x>0) minv=min(minv,a[x-1][y]);
     if(y>0) minv=min(minv,a[x][y-1]);
     if(minv>a[x][y]) update(1,0,h*w-1,a[x][y],minv-1,d);
