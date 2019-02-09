@@ -1,4 +1,5 @@
 #include<bits/stdc++.h>
+#include "werewolf.h"
 using namespace std;
 
 typedef pair<int,int> pii;
@@ -7,7 +8,7 @@ struct E{int u,v;} e[N];
 struct Event{int ty,a,b,c;};
 int n,m,q,tot,bit[N];
 vector<Event> g[N];
-int ans[N];
+vector<int> ans;
 
 inline int min(int x,int y){return x<y?x:y;}
 inline int max(int x,int y){return x>y?x:y;}
@@ -58,12 +59,12 @@ inline int lowbit(const int &x){return x&-x;}
 void add(int p){for(p++;p<=n<<1;p+=lowbit(p)) bit[p]++;}
 int sum(int p){int res=0;for(p++;p;p-=lowbit(p)) res+=bit[p];return res;}
 
-int main()
+vector<int> check_validity(int N,vector<int> X,vector<int> Y,vector<int> S,vector<int> T,vector<int> L,vector<int> R)
 {
-    scanf("%d%d%d",&n,&m,&q);
+    n=N;m=X.size();q=S.size();
     for(int i=1;i<=m;i++)
     {
-        scanf("%d%d",&e[i].u,&e[i].v);
+        e[i].u=X[i-1];e[i].v=Y[i-1];
         if(e[i].u>e[i].v) swap(e[i].u,e[i].v);
         e[i].u++;e[i].v++;
     }
@@ -73,10 +74,10 @@ int main()
     t2.build(max);
     for(int i=1;i<=n;i++)
         g[t1.in[i]].push_back({1,t2.in[i],0,0});
-    for(int i=1,s,t,l,r,x1,x2,y1,y2;i<=q;i++)
+    for(int i=0,s,t,l,r,x1,x2,y1,y2;i<q;i++)
     {
-        scanf("%d%d%d%d",&s,&t,&l,&r);
-        s++;t++;l++;r++;
+        s=S[i]+1;t=T[i]+1;
+        l=L[i]+1;r=R[i]+1;
         tie(x1,x2)=t1.jump(s,l,geq);
         tie(y1,y2)=t2.jump(t,r,leq);
         g[x1-1].push_back({2,y1-1,i,1});
@@ -84,13 +85,14 @@ int main()
         g[x2].push_back({2,y1-1,i,-1});
         g[x2].push_back({2,y2,i,1});
     }
+    ans.resize(q);
     for(int i=0;i<=n<<1;i++)
         for(Event ev : g[i])
         {
             if(ev.ty==1) add(ev.a);
             else ans[ev.b]+=ev.c*sum(ev.a);
         }
-    for(int i=1;i<=q;i++)
-        puts(ans[i]?"1":"0");
-    return 0;
+    for(int i=0;i<q;i++)
+        if(ans[i]>0) ans[i]=1;
+    return ans;
 }
