@@ -5,32 +5,8 @@ typedef pair<int,int> pii;
 const int N=1010;
 vector<int> g[N];
 vector<pii> msg[N];
-int dis[N],n,m,d1[N];
+int dis[N],n,m;
 bool inq[N];
-
-void spfa1()
-{
-    queue<int> q;
-    memset(d1,0x3f,sizeof(d1));
-    for(int i=1;i<=50;i++)
-    {
-        d1[i]=0;
-        inq[i]=1;
-        q.push(i);
-    }
-    while(!q.empty())
-    {
-        int u=q.front();
-        for(int v : g[u])
-            if(d1[u]+1<d1[v])
-            {
-                d1[v]=d1[u]+1;
-                if(inq[v]) continue;
-                inq[v]=1;q.push(v);
-            }
-        q.pop();inq[u]=0;
-    }
-}
 
 void spfa()
 {
@@ -68,12 +44,12 @@ int main()
         g[u].push_back(v);
         g[v].push_back(u);
     }
-    spfa();spfa1();
+    spfa();
     queue<int> q;
     for(int i=1;i<=50;i++)
     {
         q.push(i);
-        msg[i].push_back(pii(d1[i],0));
+        msg[i].push_back(pii(0,0));
     }
     while(!q.empty())
     {
