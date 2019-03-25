@@ -1,0 +1,146 @@
+---
+title: 【NOI2019模拟赛（五十）】博士的计算器
+date: 2019-03-25
+tag: [数论,BSGS,exBSGS,线性筛]
+---
+
+### 题意简述
+
+你需要写一个程序，支持如下操作：
+
+<!--more-->
+
+1. 给定$y,z,p$，求$y^z\;\text{mod}\;p$，其中$y,z,p\leq 10^9$，操作总数$500$
+2. 给定$y,z,p$，求$y^x\equiv z\;(\text{mod}\;p)$的最小非负整数解，其中$y,z,p\leq 10^9$，操作总数$50$
+3. 给定$y,z,p$，求$\binom{z}{y}\;\text{mod}\;p$，其中$y,z\leq 10^7,p\leq 10^9$，操作总数$50$
+
+注意：不保证$p$为质数
+
+### 题解
+
+这是一道素质非常差的题，将三个模板拼到一起，足以看出，出题人脑子卡屎、水平极低
+
+第一问快速幂不必多说
+
+第二问`exBSGS`，就是令$g=\gcd(y,p)$，然后有$y^{x-1}\times\frac{y}{g}\equiv \frac{z}{g}\;(\text{mod}\;\frac{p}{g})$
+
+递归解决，直到$g=1$时跑一遍`BSGS`即可。注意$z=1$时需要特判，除此之外若$g\nmid z$则无解
+
+第三问，开始写了一发`exLucas`，结果被卡常，还不如暴力……
+
+注意到$y,z$很小，所以可以预处理$10^7$以内的质数，然后分别统计$z!,y!,(z-y)!$中包含的因子$p_i$数量，计算相应的幂次，枚举$p_i$，把结果乘起来即可
+
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+
+typedef long long LL;
+
+int Pow(int a,int b,int p)
+{
+    int ans=1;
+    for(;b;b>>=1,a=1ll*a*a%p)
+        if(b&1) ans=1ll*ans*a%p;
+    return ans%p;
+}
+
+namespace Task2
+{
+    LL exgcd(LL a,LL b,LL &x,LL &y)
+    {
+        if(b==0){x=1;y=0;return a;}
+        LL g=exgcd(b,a%b,x,y);
+        LL t=x;x=y;y=t-(a/b)*y;
+        return g;
+    }
+    int inv(int a,int p)
+    {
+        LL b,k;
+        exgcd(a,p,b,k);
+        return (b%p+p)%p;
+    }
+    int bsgs(int a,int b,int p)
+    {
+        unordered_map<int,int> lg;
+        int m=ceil(sqrt(p)),base=1;
+        for(int i=0;i<m;i++)
+        {
+            lg.insert(make_pair(base,i));
+            base=1ll*base*a%p;
+        }
+        int d=1;
+        for(int i=0;i<m;i++)
+        {
+            int x=1ll*b*inv(d,p)%p;
+            if(lg.count(x)) return m*i+lg[x];
+            d=1ll*d*base%p;
+        }
+        return -1;
+    }
+    int exbsgs(int a,int b,int p)
+    {
+        if(b==1||p==1) return 0;
+        int g=__gcd(a,p);
+        if(g==1) return bsgs(a,b,p);
+        if(b%g) return -1;
+        b/=g;p/=g;
+        int res=exbsgs(a,1ll*b*inv(a/g,p)%p,p);
+        if(res==-1) return -1;
+        else return res+1;
+    }
+}
+
+namespace Task3
+{
+    const int N=10000010;
+    bool mark[N];
+    int prm[N/10],tot=0;
+    void prework(int n=10000000)
+    {
+        for(int i=2;i<=n;i++)
+        {
+            if(!mark[i]) prm[++tot]=i;
+            for(int j=1;j<=tot&&i*prm[j]<=n;j++)
+            {
+                mark[i*prm[j]]=1;
+                if(i%prm[j]==0) break;
+            }
+        }
+    }
+    int main(int n,int m,int p)
+    {
+        if(n<m) return 0;
+        int ans=1;
+        for(int i=1;i<=tot&&n>=prm[i];i++)
+        {
+            int a=n,b=m,c=n-m,cnt=0;
+            while(a>=prm[i]) cnt+=a/prm[i],a/=prm[i];
+            while(b>=prm[i]) cnt-=b/prm[i],b/=prm[i];
+            while(c>=prm[i]) cnt-=c/prm[i],c/=prm[i];
+            if(cnt>1) ans=1ll*ans*Pow(prm[i],cnt,p)%p;
+            if(cnt==1) ans=1ll*ans*prm[i]%p;  //奇妙优化，特判1次方，快了300ms
+        }
+        return ans%p;
+    }
+}
+
+int main()
+{
+    int T,y,z,p,ty;
+    Task3::prework();
+    scanf("%d",&T);
+    while(T--)
+    {
+        scanf("%d%d%d%d",&ty,&y,&z,&p);
+        if(ty==1) printf("%d\n",Pow(y,z,p));
+        if(ty==2)
+        {
+            int ans=Task2::exbsgs(y%p,z%p,p);
+            if(ans==-1) puts("Math Error");
+            else printf("%d\n",ans);
+        }
+        if(ty==3) printf("%d\n",Task3::main(z,y,p));
+    }
+    return 0;
+}
+```
