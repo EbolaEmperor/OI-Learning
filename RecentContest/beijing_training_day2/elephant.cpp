@@ -208,14 +208,6 @@ namespace Treap2
             return pii(o,t.se);
         }
     }
-
-    void dfs(int o)
-    {
-        if(!o) return;
-        dfs(lc[o]);
-        dfs(rc[o]);
-    }
-
     void insert(int k,int x)
     {
         rnd[k]=rand();
