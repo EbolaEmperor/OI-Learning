@@ -35,9 +35,7 @@ pdd dp(int r,int b)
             tans.FR+=prb*tmp.SE;
             tans.SE+=prb*tmp.FR;
         }
-        if(tans.FR<res.FR) continue;
         if(tans.FR>res.FR) res=tans;
-        else if(tans.SE<res.SE) res=tans;
     }
     return res;
 }
