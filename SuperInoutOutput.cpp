@@ -27,6 +27,7 @@ namespace IO
     char obuf[S],*oS=obuf,*oT=oS+S-1,c,qu[55];int qr;
     inline void flush(){fwrite(obuf,1,oS-obuf,stdout);oS=obuf;}
     inline void putc(char x){*oS++ =x;if(oS==oT) flush();}
+    struct END{~END(){flush();} } EENNDD;
     template <class I>inline void print(I x)
     {
         if(!x) putc('0');
