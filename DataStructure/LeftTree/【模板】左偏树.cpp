@@ -1,60 +1,45 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-int son[100010][2];
-int dis[100010],val[100010];
-int fa[100010];
+const int N=200010;
+int n,m,fa[N],val[N],dis[N],ch[N][2];
 
-int find(int x){return fa[x]==x?x:find(fa[x]);}
-
-int Merge(int a,int b)
+int find(int x){return fa[x]==x?x:fa[x]=find(fa[x]);}
+int merge(int a,int b)
 {
-	if(a==0||b==0) return a+b;
-	if(val[b]<val[a]||(val[b]==val[a]&&b<a)) swap(a,b);
-	son[a][1]=Merge(son[a][1],b);
-	fa[son[a][1]]=a;
-	if(dis[son[a][0]]<dis[son[a][1]]) swap(son[a][0],son[a][1]);
-	dis[a]=dis[son[a][1]]+1;
-	return a;
+    if(!a||!b) return a|b;
+    if(val[b]<val[a]||val[b]==val[a]&&b<a) swap(a,b);
+    fa[ch[a][1]=merge(ch[a][1],b)]=a;
+    if(dis[ch[a][1]]>dis[ch[a][0]]) swap(ch[a][0],ch[a][1]);
+    dis[a]=dis[ch[a][1]]+1;
+    return a;
 }
-
-int Delete(int a)
+int pop(int a)
 {
-	int ans=val[a];
-	val[a]=-1;
-	fa[son[a][0]]=son[a][0];
-	fa[son[a][1]]=son[a][1];
-	Merge(son[a][0],son[a][1]);
-	return ans;
+    int rec=val[a];val[a]=-1;
+    fa[ch[a][0]]=ch[a][0];
+    fa[ch[a][1]]=ch[a][1];
+    fa[a]=merge(ch[a][0],ch[a][1]);
+    return rec;
 }
 
 int main()
 {
-	int n,m,x,y,opt;
-	cin>>n>>m;
-	for(int i=1;i<=n;i++)
-	{
-		scanf("%d",val+i);
-		fa[i]=i;
-	}
-	for(int i=1;i<=m;i++)
-	{
-		scanf("%d",&opt);
-		if(opt==1)
-		{
-			scanf("%d%d",&x,&y);
-			if(val[x]==-1||val[y]==-1) continue;
-			x=find(x);y=find(y);
-			if(x==y) continue;
-			Merge(x,y);
-		}
-		else
-		{
-			scanf("%d",&x);
-			if(val[x]==-1){puts("-1");continue;}
-			x=find(x);
-			printf("%d\n",Delete(x));
-		}
-	}
-	return 0;
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;i++)
+        scanf("%d",val+i),fa[i]=i;
+    int opt,x,y;
+    while(m--)
+    {
+        scanf("%d%d",&opt,&x);
+        if(opt==1)
+        {
+            scanf("%d",&y);
+            if(val[x]<0||val[y]<0) continue;
+            x=find(x);y=find(y);
+            if(x!=y) merge(x,y);
+        }
+        else printf("%d\n",val[x]<0?-1:pop(find(x)));
+    }
+    return 0;
 }
