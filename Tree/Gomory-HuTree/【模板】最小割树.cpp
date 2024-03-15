@@ -1,166 +1,124 @@
+// luogu-judger-enable-o2
 #include<bits/stdc++.h>
-#define INF 0x7fffffff
 using namespace std;
 
-const int N=510,M=14010;
-struct Edge{int to,capa,next;} e[N<<1];
-int h[N],sum=0,n,m,now=0;
-int pdx[N],tdx[N],col[N];
-int fa[9][N],mn[9][N],dep[N];
+const int N=1010,M=30010;
+struct Edge{int v,w,nxt;} e[M];
+int h[N],sum=0,n,m;
+int col[N],tot=0;
+int cut[N][N];
+int pdx[N],tdx[N];
 
-void add_edge(int u,int v,int w)
+namespace Flow
 {
-    e[++sum].to=v;
-    e[sum].capa=w;
-    e[sum].next=h[u];
-    h[u]=sum;
-}
-
-namespace GHT
-{
-    struct Edge{int to,capa,flow,next;} e[M];
+    struct Edge{int v,w,f,nxt;} e[M];
     int h[N],sum=-1,s,t;
-    int d[N],cur[N];
+    int dep[N],cur[N];
     bool vis[N];
-
     void add_edge(int u,int v,int w)
     {
-        e[++sum]={v,w,0,h[u]};h[u]=sum;
-        e[++sum]={u,w,0,h[v]};h[v]=sum;
+        e[++sum]=(Edge){v,w,0,h[u]};h[u]=sum;
+        e[++sum]=(Edge){u,w,0,h[v]};h[v]=sum;
     }
-
-    bool BFS()
+    bool bfs()
     {
-        queue<int> q;q.push(s);
-        memset(vis,0,sizeof(vis));
-        vis[s]=1;d[s]=0;
+        queue<int> q;
+        memset(vis,0,sizeof(bool)*(n+1));
+        q.push(s);dep[s]=0;vis[s]=1;
         while(!q.empty())
         {
             int u=q.front();q.pop();
-            for(int t=h[u];~t;t=e[t].next)
+            for(int i=h[u];~i;i=e[i].nxt)
             {
-                int v=e[t].to;
-                if(!vis[v]&&e[t].capa>e[t].flow)
-                {
-                    d[v]=d[u]+1;
-                    vis[v]=1;
-                    q.push(v);
-                }
+                int v=e[i].v;
+                if(!vis[v]&&e[i].w>e[i].f)
+                    dep[v]=dep[u]+1,vis[v]=1,q.push(v);
             }
         }
         return vis[t];
     }
-
-    int DFS(int u,int a)
+    int dfs(int u,int a)
     {
         if(u==t||a==0) return a;
-        int res=0,flow;
-        for(int &t=cur[u];~t;t=e[t].next)
+        int res=0;
+        for(int &i=cur[u];~i;i=e[i].nxt)
         {
-            int v=e[t].to;
-            if(d[v]!=d[u]+1) continue;
-            flow=DFS(v,min(a,e[t].capa-e[t].flow));
-            if(!flow) continue;
-            e[t].flow+=flow;
-            e[t^1].flow-=flow;
-            res+=flow;a-=flow;
+            int v=e[i].v;
+            if(dep[v]!=dep[u]+1) continue;
+            int w=dfs(v,min(a,e[i].w-e[i].f));
+            if(w) e[i].f+=w,e[i^1].f-=w,res+=w,a-=w;
             if(a==0) break;
         }
         return res;
     }
-
-    int Dinic(int x,int y)
+    int work(int _s,int _t)
     {
-        int flow=0;s=x;t=y;
-        for(int i=0;i<=sum;i++) e[i].flow=0;
-        while(BFS())
+        s=_s;t=_t;int res=0;
+        for(int i=0;i<=sum;i++) e[i].f=0;
+        while(bfs())
         {
             memcpy(cur,h,sizeof(h));
-            flow+=DFS(s,INF);
+            res+=dfs(s,0x3f3f3f3f);
         }
-        return flow;
+        return res;
     }
-
     void dfs(int u)
     {
-        col[u]=now;
-        for(int t=h[u];~t;t=e[t].next)
-            if(e[t].capa>e[t].flow&&col[e[t].to]!=now)
-                dfs(e[t].to);
-    }
-
-    void build(int l,int r)
-    {
-        if(l>=r) return;
-        int x=pdx[l],y=pdx[l+1];
-        int cut=Dinic(x,y);
-        now++;dfs(x);int p=l,q=r;
-        for(int i=l;i<=r;i++)
-            if(col[pdx[i]]==now) tdx[p++]=pdx[i];
-            else tdx[q--]=pdx[i];
-        for(int i=l;i<=r;i++) pdx[i]=tdx[i];
-        ::add_edge(x,y,cut);
-        ::add_edge(y,x,cut);
-        build(l,p-1);build(q+1,r);
+        col[u]=tot;
+        for(int i=h[u];~i;i=e[i].nxt)
+            if(e[i].w>e[i].f&&col[e[i].v]!=tot)
+                dfs(e[i].v);
     }
 }
 
-void dfs(int u,int la)
+void add_edge(int u,int v,int w)
 {
-    for(int i=1;i<=8;i++)
-    {
-        fa[i][u]=fa[i-1][fa[i-1][u]];
-        mn[i][u]=min(mn[i-1][u],mn[i-1][fa[i-1][u]]);
-    }
-    for(int t=h[u];t;t=e[t].next)
-    {
-        int v=e[t].to;
-        if(v==la) continue;
-        dep[v]=dep[u]+1;
-        mn[0][v]=e[t].capa;
-        fa[0][v]=u;dfs(v,u);
-    }
+    e[++sum]=(Edge){v,w,h[u]};h[u]=sum;
+    e[++sum]=(Edge){u,w,h[v]};h[v]=sum;
 }
-
-int getcut(int x,int y)
+void build(int l,int r)
 {
-    int res=INF;
-    if(dep[x]<dep[y]) swap(x,y);
-    for(int i=8;i>=0;i--)
-        if(dep[fa[i][x]]>=dep[y])
-        {
-            res=min(res,mn[i][x]);
-            x=fa[i][x];
-        }
-    if(x==y) return res;
-    for(int i=8;i>=0;i--)
-        if(fa[i][x]!=fa[i][y])
-        {
-            res=min(res,mn[i][x]);
-            res=min(res,mn[i][y]);
-            x=fa[i][x];y=fa[i][y];
-        }
-    res=min(res,min(mn[0][x],mn[0][y]));
-    return res;
+    if(l>=r) return;
+    int x=pdx[l],y=pdx[l+1];
+    int w=Flow::work(x,y);
+    add_edge(x,y,w);
+    tot++;Flow::dfs(x);
+    int pl=l,pr=r;
+    for(int i=l;i<=r;i++)
+        if(col[pdx[i]]==tot) tdx[pl++]=pdx[i];
+        else tdx[pr--]=pdx[i];
+    for(int i=l;i<=r;i++) pdx[i]=tdx[i];
+    build(l,pl-1);build(pr+1,r);
+}
+void dfs(int u,int fa,int *cut)
+{
+    for(int i=h[u];i;i=e[i].nxt)
+    {
+        int v=e[i].v;
+        if(v==fa) continue;
+        cut[v]=min(cut[u],e[i].w);
+        dfs(v,u,cut);
+    }
 }
 
 int main()
 {
-    int u,v,w,q;
     scanf("%d%d",&n,&m);
-    memset(GHT::h,-1,sizeof(GHT::h));
-    for(int i=1;i<=m;i++)
+    memset(Flow::h,-1,sizeof(Flow::h));
+    for(int i=1,u,v,w;i<=m;i++)
     {
         scanf("%d%d%d",&u,&v,&w);
-        GHT::add_edge(u,v,w);
+        Flow::add_edge(u,v,w);
     }
     for(int i=1;i<=n;i++) pdx[i]=i;
-    GHT::build(1,n);
-    dep[1]=1;dfs(1,0);
-    for(scanf("%d",&q);q;q--)
+    build(1,n);
+    for(int i=1;i<=n;i++)
+        cut[i][i]=2e9,dfs(i,0,cut[i]);
+    int q,x,y;scanf("%d",&q);
+    while(q--)
     {
-        scanf("%d%d",&u,&v);
-        printf("%d\n",getcut(u,v));
+        scanf("%d%d",&x,&y);
+        printf("%d\n",cut[x][y]);
     }
     return 0;
 }
