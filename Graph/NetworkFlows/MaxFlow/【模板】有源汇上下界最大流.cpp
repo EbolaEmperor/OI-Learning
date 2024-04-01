@@ -74,6 +74,39 @@ long long Dinic(){
     return ans;
 }
 
+long long max_feasible_flow(int my_s, int my_t){
+    // link the flow-balance edges
+    for(int i = 1; i <= my_t; i++){
+        if(inflow[i] > outflow[i])
+            add_edge(s, i, 0, inflow[i] - outflow[i]);
+        if(inflow[i] < outflow[i])
+            add_edge(i, t, 0, outflow[i] - inflow[i]);
+    }
+    add_edge(my_t, my_s, 0, INF);
+
+    // compute feasible flow and check
+    bool feasible = true;
+    long long feasible_flow = Dinic();
+    for(int i = h[s]; i != -1; i = e[i].next)
+        if(e[i].flow < e[i].w){
+            feasible = false;
+            break;
+        }
+    if(!feasible) return -1;
+
+    // delete the edge : t->s (0,inf)
+    h[my_s] = e[h[my_s]].next;
+    h[my_t] = e[h[my_t]].next;
+    tot -= 2;
+
+    // compute the max increasement flow
+    s = my_s;
+    t = my_t;
+    long long incr_flow = Dinic();
+    
+    return feasible_flow + incr_flow;
+}
+
 int main(){
     int n, m;
     while(~scanf("%d%d", &n, &m)){
@@ -98,39 +131,7 @@ int main(){
                 add_edge(i, n+T, L, R);
             }
         }
-
-        // link the flow-balancing edges for leakflow or overflow nodes.
-        for(int i = 1; i <= my_t; i++){
-            if(inflow[i] > outflow[i])
-                add_edge(s, i, 0, inflow[i] - outflow[i]);
-            if(inflow[i] < outflow[i])
-                add_edge(i, t, 0, outflow[i] - inflow[i]);
-        }
-        add_edge(my_t, my_s, 0, INF);
-
-        // compute feasible flow and check
-        bool feasible = true;
-        long long feasible_flow = Dinic();
-        for(int i = h[s]; i != -1; i = e[i].next)
-            if(e[i].flow < e[i].w){
-                feasible = false;
-                break;
-            }
-        if(!feasible){
-            puts("-1\n");
-            continue;
-        }
-
-        // delete the edge : t->s (0,inf)
-        h[my_s] = e[h[my_s]].next;
-        h[my_t] = e[h[my_t]].next;
-        tot -= 2;
-
-        // compute the max increasement flow
-        s = my_s;
-        t = my_t;
-        long long incr_flow = Dinic();
-        printf("%lld\n\n", feasible_flow + incr_flow);
+        printf("%lld\n\n", max_feasible_flow(my_s, my_t));
     }
     return 0;
 }
