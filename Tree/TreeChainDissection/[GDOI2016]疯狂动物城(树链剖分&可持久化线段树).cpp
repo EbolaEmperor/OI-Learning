@@ -35,7 +35,7 @@ namespace IO
 
 typedef pair<int,int> pii;
 using namespace IO;
-const int N=100010;
+const int N=1000010;
 struct Edge{int to,next;} e[N<<1];
 int h[N],esum=0,n,m,val[N];
 int fa[N],hson[N],top[N];
