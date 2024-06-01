@@ -28,6 +28,8 @@ int getcnt(int x,int l,int r)
 
 int query(int l,int r)
 {
+    // [l,r] 的最小众数要么是 [R[l]+1, L[r]-1] 的众数，
+    //    要么是 [l,R[l]] 或 [L[r],r] 中出现过的数
     int ans=mode[l/B+1][r/B-1];
     int mx=getcnt(ans,l,r);
     for(int i=l;i<=min(r,(l/B+1)*B-1);i++)
