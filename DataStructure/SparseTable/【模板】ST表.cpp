@@ -1,31 +1,35 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-int mult[1500010][20];
-int pw2[20],lg2[1500010];
+const int S=(1<<20)+5;
+char buf[S],*H,*T;
+inline char Get(){
+	if(H==T) T=(H=buf)+fread(buf,1,S,stdin);
+	if(H==T) return -1;return *H++;
+}
+int read(){
+	int x=0,fg=1;char c=Get();
+	while(!isdigit(c)&&c!='-') c=Get();
+	if(c=='-') fg=-1,c=Get();
+	while(isdigit(c)) x=x*10+c-'0',c=Get();
+	return x*fg;
+}
 
-int main()
-{
-	int n,m,l,r;
-	cin>>n>>m;
-	memset(mult,0,sizeof(mult));
-	for(int i=1;i<=n;i++) scanf("%d",&mult[i][0]);
-	pw2[0]=1;
-	for(int i=1;i<=17;i++) pw2[i]=pw2[i-1]*2;
-	int pos=0;
-	for(int i=1;i<=n;i++)
-	{
-		if(i>=pw2[pos+1]) pos++;
-		lg2[i]=pos;
-	}
-	for(int i=1;i<=17;i++)
-		for(int j=1;j<=n;j++)
-			mult[j][i]=max(mult[j][i-1],mult[j+pw2[i-1]][i-1]);
-	for(int i=1;i<=m;i++)
-	{
-		scanf("%d%d",&l,&r);
-		int p=lg2[r-l+1];
-		printf("%d\n",max(mult[l][p],mult[r-pw2[p]+1][p]));
+const int N = 100010;
+int mult[20][N];
+int lg2[N];
+
+int main(){
+	int n = read(), m = read();
+	for(int i = 1; i <= n; i++) mult[0][i] = read();
+	for(int i = 2; i <= n; i++) lg2[i] = lg2[i >> 1] + 1;
+	for(int i = 0; i <= 15; i++)
+		for(int j = 1; j + (1 << i + 1) - 1 <= n; j++)
+			mult[i + 1][j] = max(mult[i][j], mult[i][j + (1 << i)]);
+	for(int i = 1, l, r; i <= m; i++){
+		l = read(); r = read();
+		int p = lg2[r - l + 1];
+		printf("%d\n", max(mult[p][l], mult[p][r - (1 << p) + 1]));
 	}
 	return 0;
 }
