@@ -1,40 +1,45 @@
 #include<bits/stdc++.h>
 using namespace std;
-
 typedef long long LL;
-const int N=30,M=15000010;
-int p1[N],p2[N],*p,k,n;
-int cnt1=0,cnt2=0,*cc;
-LL R,cnt=0,ans=0;
-LL num1[M],num2[M],*num;
+LL R;
 
-void dfs(LL now,int pos)
-{
-    num[++(*cc)]=now;
-    for(int i=pos;i<=n;i++)
-    {
-        if((long double)now*p[i]>R) break;
-        dfs(now*p[i],i);
+class Solver{
+public:
+    vector<int> p;
+    vector<LL> num;
+    void dfs(LL now, int pos){
+        num.push_back(now);
+        for(int i = pos; i < p.size(); ++i){
+            if(now > R / p[i]) break;
+            dfs(now * p[i], i);
+        }
     }
-}
+} solver1, solver2;
+#define num1 solver1.num
+#define num2 solver2.num
 
-int main()
-{
-    scanf("%d%lld",&k,&R);
-    for(int i=1;i<=k;i++) scanf("%d",p1+i);
-    sort(p1+1,p1+1+k);
-    int tot1=0,tot2=0;
-    for(int i=1;i<=k;i++)
-        if(i&1) p1[++tot1]=p1[i];
-        else p2[++tot2]=p1[i];
-    n=tot1;p=p1;cc=&cnt1;num=num1;dfs(1,1);
-    n=tot2;p=p2;cc=&cnt2;num=num2;dfs(1,1);
-    sort(num1+1,num1+1+cnt1);sort(num2+1,num2+1+cnt2);
-    for(int i=1,cur=cnt2;i<=cnt1;i++)
-    {
-        while((long double)num1[i]*num2[cur]>R) cur--;
-        cnt+=cur;ans=max(ans,num1[i]*num2[cur]);
+int main(){
+    int n;
+    cin >> n >> R;
+    vector<int> p(n);
+    for(int i = 0; i < n; ++i) cin >> p[i];
+    sort(p.begin(), p.end());
+    for(int i = 0; i < n / 2; i++){
+        solver1.p.push_back(p[2 * i]);
+        solver2.p.push_back(p[2 * i + 1]);
     }
-    printf("%lld\n%lld\n",ans,cnt);
+    if(n & 1) solver2.p.push_back(p[n - 1]);
+    solver1.dfs(1, 0);
+    solver2.dfs(1, 0);
+    sort(num1.begin(), num1.end());
+    sort(num2.begin(), num2.end());
+    int cur = num2.size() - 1;
+    LL cnt = 0, maxn = 0;
+    for(LL x : num1){
+        while(x > R / num2[cur]) --cur;
+        cnt += cur + 1;
+        maxn = max(maxn, x * num2[cur]);
+    }
+    cout << cnt << " " << maxn << endl;
     return 0;
 }
