@@ -103,52 +103,46 @@ LL computeSplit(int m){
 
 // 在展开 l 次的树到展开 r 次的树之间找答案
 LL babyStep(int l, int r){
-    set<Point> nodes;
-    LL ans = INT64_MAX, sum = w[0];
-    nodes.insert(make_pair(w[0], make_pair(0, 0)));
+    set<Point> leafs;
+    LL ans = INT64_MAX, sum = 0;
+    priority_queue<Point, vector<Point>, greater<Point>> nodes;
+    nodes.push(make_pair(w[0], make_pair(0, 0)));
     rec[0] = 0;
     for(int i = 1; i <= 2 * n; i++) rec[i] = -1;
-    auto it = nodes.begin();
     for(int i = 1; i < l + n; i++){
-        if(i < l){
-            it = nodes.begin();
-            nodes.erase(it);
-            auto pos = it->second;
-            sum -= b[pos.first] + w[pos.second];
-        } else if(i == l) {
-            it = nodes.begin();
-        } else {
-            if(nodes.size() >= n) break;
-            if(++it == nodes.end()) break;
+        if(nodes.empty()) break;
+        auto pos = nodes.top().second;
+        if(i >= l){
+            leafs.insert(nodes.top());
+            sum += b[pos.first] + w[pos.second];
         }
-        auto pos = it->second;
+        nodes.pop();
         auto pos1 = make_pair(pos.first + 1, pos.second);
         if(pos1.first < l && rec[pos1.first] < pos1.second){
-            nodes.insert(make_pair(b[pos1.first] + w[pos1.second], pos1));
+            nodes.push(make_pair(b[pos1.first] + w[pos1.second], pos1));
             rec[pos1.first] = pos1.second;
-            sum += b[pos1.first] + w[pos1.second];
         }
         auto pos2 = make_pair(pos.first, pos.second + 1);
         if(pos2.second < w.size() && rec[pos2.first] < pos2.second){
-            nodes.insert(make_pair(b[pos2.first] + w[pos2.second], pos2));
+            nodes.push(make_pair(b[pos2.first] + w[pos2.second], pos2));
             rec[pos2.first] = pos2.second;
-            sum += b[pos2.first] + w[pos2.second];
         }
     }
+    if(leafs.size() == n) ans = sum;
     for(int i = l; i < r; i++){
-        if(nodes.empty()) break;
-        sum -= nodes.begin()->first;
-        nodes.erase(nodes.begin());
+        if(leafs.empty()) break;
+        sum -= leafs.begin()->first;
+        leafs.erase(leafs.begin());
         for(int j = 0; j < cnt[i]; j++){
-            nodes.insert(make_pair(b[i] + w[j], make_pair(i, j)));
+            leafs.insert(make_pair(b[i] + w[j], make_pair(i, j)));
             sum += b[i] + w[j];
         }
-        while(nodes.size() > n){
-            auto it = nodes.end(); --it;
+        while(leafs.size() > n){
+            auto it = leafs.end(); --it;
             sum -= it->first;
-            nodes.erase(it);
+            leafs.erase(it);
         }
-        if(nodes.size() == n){
+        if(leafs.size() == n){
             if(sum < ans) ans = sum;
             else break;
         }
@@ -162,10 +156,12 @@ int main(){
     int l = 0, r = split.size()-1, mid;
     while(l < r){
         mid = (l + r) / 2;
-        if(computeSplit(mid) >= computeSplit(mid+1)) l = mid + 1;
+        if(computeSplit(mid) == INT64_MAX
+           || computeSplit(mid) > computeSplit(mid+1)) l = mid + 1;
         else r = mid;
     }
     int lft = l ? split[l-1] : 1;
-    cout << babyStep(lft, split[l+1]) << endl;
+    int rgt = l+1 < split.size() ? split[l+1] : 2*n;
+    cout << babyStep(lft, rgt) << endl;
     return 0;
 }
