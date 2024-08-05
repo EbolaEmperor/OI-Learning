@@ -1,3 +1,4 @@
+// 复杂度 O(n log^2 n)
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -35,8 +36,6 @@ long long work(){
 }
 
 int main(){
-    int t;
-    scanf("%d", &t);
-    while(t--) printf("%lld\n", work());
+    printf("%lld\n", work());
     return 0;
 }
