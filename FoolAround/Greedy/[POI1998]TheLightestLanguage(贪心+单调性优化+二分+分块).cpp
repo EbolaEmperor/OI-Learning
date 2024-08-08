@@ -35,7 +35,7 @@ void read_w(){
         w[i] = read();
     sort(w.begin(), w.end());
     cnt.resize(2 * n + 5);
-    const int B = n;
+    const int B = 1.2 * n;
     int scnt = 0;
     for(int i = 0; i <= 2 * n; i++){
         cnt[i] = min(2 * n / (i + 1), k);
@@ -103,7 +103,7 @@ LL computeSplit(int m){
 
 // 在展开 l 次的树到展开 r 次的树之间找答案
 LL babyStep(int l, int r){
-    set<Point> leafs;
+    multiset<long long> leafs;
     LL ans = INT64_MAX, sum = 0;
     priority_queue<Point, vector<Point>, greater<Point>> nodes;
     nodes.push(make_pair(w[0], make_pair(0, 0)));
@@ -113,7 +113,7 @@ LL babyStep(int l, int r){
         if(nodes.empty()) break;
         auto pos = nodes.top().second;
         if(i >= l){
-            leafs.insert(nodes.top());
+            leafs.insert(b[pos.first] + w[pos.second]);
             sum += b[pos.first] + w[pos.second];
         }
         nodes.pop();
@@ -131,15 +131,16 @@ LL babyStep(int l, int r){
     if(leafs.size() == n) ans = sum;
     for(int i = l; i < r; i++){
         if(leafs.empty()) break;
-        sum -= leafs.begin()->first;
+        sum -= *leafs.begin();
         leafs.erase(leafs.begin());
         for(int j = 0; j < cnt[i]; j++){
-            leafs.insert(make_pair(b[i] + w[j], make_pair(i, j)));
+            if(leafs.size() >= n && b[i] + w[j] >= *leafs.rbegin()) break;
+            leafs.insert(b[i] + w[j]);
             sum += b[i] + w[j];
         }
         while(leafs.size() > n){
             auto it = leafs.end(); --it;
-            sum -= it->first;
+            sum -= *it;
             leafs.erase(it);
         }
         if(leafs.size() == n){
