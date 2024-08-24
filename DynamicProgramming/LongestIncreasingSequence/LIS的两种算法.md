@@ -1,4 +1,4 @@
-### 法一：$O(n^2)$
+### Algorithm 1. $O(n^2)$
 
 ```cpp
 int LIS(int *a, int n)
@@ -15,7 +15,7 @@ int LIS(int *a, int n)
 }
 ```
 
-### 法二：$O(n log n)$
+### Algorithm 2. $O(n log n)$
 
 ```cpp
 int LIS(int *a, int n)
