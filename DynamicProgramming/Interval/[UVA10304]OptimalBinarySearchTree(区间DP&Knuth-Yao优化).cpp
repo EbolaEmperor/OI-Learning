@@ -18,6 +18,7 @@ long long optBST(int n){
         for(int l = 1; l + len - 1 <= n; l++){
             int r = l + len - 1;
             f[l][r] = INT64_MAX;
+            // Knuth-Yao 优化 (决策单调性) : opt[l][r-1] <= opt[l][r] <= opt[l+1][r]
             for(int k = opt[l][r-1]; k <= opt[l+1][r]; k++){
                 int tmp = f[l][k-1] + f[k+1][r] + sum[r] - sum[l-1];
                 if(tmp < f[l][r]){
