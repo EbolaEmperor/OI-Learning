@@ -18,7 +18,6 @@ long long optBST(int n){
         for(int l = 1; l + len - 1 <= n; l++){
             int r = l + len - 1;
             f[l][r] = INT64_MAX;
-            // Knuth-Yao 优化 (决策单调性) : opt[l][r-1] <= opt[l][r] <= opt[l+1][r]
             for(int k = opt[l][r-1]; k <= opt[l+1][r]; k++){
                 int tmp = f[l][k-1] + f[k+1][r] + sum[r] - sum[l-1];
                 if(tmp < f[l][r]){
@@ -28,15 +27,10 @@ long long optBST(int n){
             }
         }
     }
-    long long ans = INT64_MAX;
-    // 枚举根节点获取答案，注意不要直接用 f[1][n]，因为题目要求根节点深度为 0
+    // 减去 sum[n] 是因为题目要求根节点深度为 0
+    long long ans = f[1][n] - sum[n];
     for(int i = 1; i <= n; i++)
-        ans = min(ans, f[1][i-1] + f[i+1][n]);
-    memset(sum, 0, sizeof(int) * (n + 1));
-    for(int i = 0; i <= n + 1; i++){
         memset(f[i], 0, sizeof(long long) * (n + 1));
-        memset(opt[i], 0, sizeof(int) * (n + 1));
-    }
     return ans;
 }
 
