@@ -110,7 +110,7 @@ int main()
 		scanf("%d",Tree::w+i);
 	for(int i=1;i<=m;i++)
 	{
-		scanf("%d%d",&u,&v);;
+		scanf("%d%d",&u,&v);
 		Graph::add_edge(u,v);
 		Graph::add_edge(v,u);
 	}
