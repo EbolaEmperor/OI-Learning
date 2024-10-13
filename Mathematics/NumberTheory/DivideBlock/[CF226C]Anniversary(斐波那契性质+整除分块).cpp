@@ -37,9 +37,15 @@ long long getFib(long long n){
 
 long long getID(){
     long long maxgcd = 1;
-    for(long long d = 1; d <= r; d++){
-        d = min(r / (r / d), r);
-        if(r / d - (l - 1) / d >= k) maxgcd = d;
+    for(long long gcd = 1; gcd <= r; gcd++){
+        // 尝试完 gcd=33，直接尝试 gcd=50
+        // r = 100, gcd = 34
+        // r / (r / gcd) = r / (2) = 50
+        // 在 r/gcd 不变的情况下，gcd 最大能是多少
+        gcd = min(r / (r / gcd), r);
+        if(r / gcd - (l - 1) / gcd >= k) maxgcd = gcd;
+        // 上一步到了这里，gcd = 33
+        // 接下来 gcd++ 变成 34，然后进入下一次循环
     }
     return maxgcd;
 }
