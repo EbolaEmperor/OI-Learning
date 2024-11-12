@@ -3,7 +3,7 @@ using namespace std;
 
 const int ha=1000000007;
 int n,m,K,f[35][35][520];
-int add(int &x,const int &y){x=(x+y>=ha)?(x+y-ha):(x+y);}
+void add(int &x,const int &y){x=(x+y>=ha)?(x+y-ha):(x+y);}
 
 int main()
 {
