@@ -7,7 +7,7 @@ int mn[N << 2], sand[N << 2], sor[N << 2];
 int tand[N << 2], tor[N << 2];
 int n, q, a[N];
 
-void pushup(int o) {
+void maintain(int o) {
     sand[o] = sand[o << 1] & sand[o << 1 | 1];
     sor[o] = sor[o << 1] | sor[o << 1 | 1];
     mn[o] = min(mn[o << 1], mn[o << 1 | 1]);
@@ -33,7 +33,6 @@ void pushdown(int o) {
         mand(o << 1 | 1, tand[o]);
         tand[o] = all;
     }
-
     if (tor[o] > 0) {
         mor(o << 1, tor[o]);
         mor(o << 1 | 1, tor[o]);
@@ -51,29 +50,29 @@ void build(int o, int l, int r) {
     int mid = (l + r) / 2;
     build(o << 1, l, mid);
     build(o << 1 | 1, mid + 1, r);
-    pushup(o);
+    maintain(o);
 }
 
 void cand(int o, int l, int r, int nl, int nr, int x) {
-    if ((sor[o]&x) == sor[o]) return;
-    if (l >= nl && r <= nr && (sand[o]&x) == (sor[o]&x))
-        return mand(o, x); // 打上 lazy 标记，结束递归
+    if (l >= nl && r <= nr)
+        if (((x ^ all) & (sand[o] | (sor[o]^all))) == (x ^ all))
+            return mand(o, x);
     pushdown(o);
     int mid = (l + r) / 2;
     if (nl <= mid) cand(o << 1, l, mid, nl, nr, x);
     if (nr > mid) cand(o << 1 | 1, mid + 1, r, nl, nr, x);
-    pushup(o);
+    maintain(o);
 }
 
 void cor(int o, int l, int r, int nl, int nr, int x) {
-    if ((sand[o] | x) == sand[o]) return;
-    if (l >= nl && r <= nr && (sand[o] | x) == (sor[o] | x))
-        return mor(o, x); // 打上 lazy 标记，结束递归
+    if (l >= nl && r <= nr)
+        if ((x & (sand[o] | (sor[o]^all))) == x)
+            return mor(o, x);
     pushdown(o);
     int mid = (l + r) / 2;
     if (nl <= mid) cor(o << 1, l, mid, nl, nr, x);
     if (nr > mid) cor(o << 1 | 1, mid + 1, r, nl, nr, x);
-    pushup(o);
+    maintain(o);
 }
 
 int qmin(int o, int l, int r, int nl, int nr) {
