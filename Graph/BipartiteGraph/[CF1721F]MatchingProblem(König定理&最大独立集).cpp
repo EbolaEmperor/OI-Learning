@@ -73,7 +73,8 @@ public:
         return flow;
     }
 
-    void decompDM(vector<int> &indep, vector<int> &key, int *reIndex){
+    // Konig 分解：将点集划分成 最大独立集 + 最小点覆盖集
+    void decompKonig(vector<int> &indep, vector<int> &key, int *reIndex){
         int match = maxFlow();
         for(int i = 1; i <= n1; i++){
             if(level[i] != -1){
@@ -117,7 +118,7 @@ int main(){
 
     vector<int> indep, key;
     static int reIndex[N];
-    g.decompDM(indep, key, reIndex);
+    g.decompKonig(indep, key, reIndex);
     // for(int x : key) printf("%d%c", x, " \n"[x == key.back()]);
     // for(int x : indep) printf("%d%c", x, " \n"[x == indep.back()]);
 
