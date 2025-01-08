@@ -154,3 +154,35 @@ signed main(){
     cout << n + cnt * bigM - g.minCut() << endl;
     return 0;
 }
+
+// 下面也是一种正确的建模方法，它就是把所有的 bigM 边都删掉了，我暂时想不到怎么解释。
+// signed main(){
+//     scanf("%lld", &n);
+//     DSU dsuP(n), dsuQ(n);
+//     for(int i = 1; i <= n; i++){
+//         scanf("%lld", p + i); ++p[i];
+//         dsuP.merge(i, p[i]);
+//     }
+//     for(int i = 1; i <= n; i++){
+//         scanf("%lld", q + i); ++q[i];
+//         dsuQ.merge(i, q[i]);
+//     }
+//     g.init(n, n);
+//     int cnt = 0;
+//     for(int i = 1; i <= n; i++){
+//         if(dsuP.isRoot(i) && dsuP.siz[i] > 1) ++cnt;
+//         if(dsuQ.isRoot(i) && dsuQ.siz[i] > 1) ++cnt;
+//     }
+//     for(int i = 1; i <= n; i++){
+//         if(p[i] == i && q[i] == i) g.lackflow++;
+//         else if(p[i] != i && q[i] == i) g.addEdge(g.source, dsuP.find(i), 1); // 拆 p 的代价
+//         else if(p[i] == i && q[i] != i) g.addEdge(dsuQ.find(i) + n, g.sink, 1); // 拆 q 的代价
+//         else if(p[i] != q[i]) g.addEdge(dsuQ.find(i) + n, dsuP.find(i), 1); // 都拆的额外代价
+//         else { // 都留、都拆均有额外代价
+//             g.addEdge(dsuP.find(i), dsuQ.find(i) + n, 1);
+//             g.addEdge(dsuQ.find(i) + n, dsuP.find(i), 1);
+//         }
+//     }
+//     cout << n - g.minCut() << endl;
+//     return 0;
+// }
