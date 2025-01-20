@@ -2,6 +2,38 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+namespace IO
+{
+    const int S=(1<<20)+5;
+    //Input Correlation
+    char buf[S],*H,*T;
+    inline char Get()
+    {
+        if(H==T) T=(H=buf)+fread(buf,1,S,stdin);
+        if(H==T) return -1;return *H++;
+    }
+    inline int read()
+    {
+        int x=0,fg=1;char c=Get();
+        while(!isdigit(c)&&c!='-') c=Get();
+        if(c=='-') fg=-1,c=Get();
+        while(isdigit(c)) x=x*10+c-'0',c=Get();
+        return x*fg;
+    }
+    //Output Correlation
+    char obuf[S],*oS=obuf,*oT=oS+S-1,c,qu[55];int qr;
+    inline void flush(){fwrite(obuf,1,oS-obuf,stdout);oS=obuf;}
+    inline void putc(char x){*oS++ =x;if(oS==oT) flush();}
+    struct END{~END(){flush();} } EENNDD;
+    template <class I>inline void print(I x)
+    {
+        if(!x) putc('0');
+        if(x<0) putc('-'),x=-x;
+        while(x) qu[++qr]=x%10+'0',x/=10;
+        while(qr) putc(qu[qr--]);
+    }
+}
+
 const int P = 1e7;
 
 // 动态开点线段树，支持区间更新 max、单点查询
@@ -83,46 +115,56 @@ void solve(int o, int l, int r){
     // 处理 [l,r] 时刻的所有操作，并对完整受到 [l,r] 里所有操作影响的询问施加影响
     // 这就转化为了无插入的问题：初始时刻有一堆灰尘，受到 [l,r] 操作的影响后改变位置。
     if(!qry[o].empty()){
-        vector<pair<int,int>> opH, opV;
-        // 对 opH 与 opV 划分管辖领域
-        dsgt.clear();
-        dsgt2.clear();
-        for(int i = l; i <= r; i++){
-            if(optype[i] == 0){
-                int p = dsgt2.getval(dsgt2.root, 0, n, opl[i]);
-                opH.emplace_back(p, opl[i]);
-                dsgt.upmax(dsgt.root, 0, n, p, n - opl[i] - 1, opl[i] + 1);
-            } else {
-                int p = dsgt.getval(dsgt.root, 0, n, opl[i]);
-                opV.emplace_back(p, opl[i]);
-                dsgt2.upmax(dsgt2.root, 0, n, p, n - opl[i] - 1, opl[i] + 1);
+        if(1ll * (r - l) * qry[o].size() <= 3 * (4 * (r - l) + 2 * qry[o].size()) * log2(n)){
+            // 卡常小技巧：如果规模很小，就直接暴力做
+            for(int i = l; i <= r; i++)
+                for(int j : qry[o])
+                    if(optype[i] == 0 && qdirt[j].y <= opl[i])
+                        qdirt[j].x = max(qdirt[j].x, n - opl[i]);
+                    else if(optype[i] == 1 && qdirt[j].x <= opl[i])
+                        qdirt[j].y = max(qdirt[j].y, n - opl[i]);
+        } else {
+            vector<pair<int,int>> opH, opV;
+            // 对 opH 与 opV 划分管辖领域
+            dsgt.clear();
+            dsgt2.clear();
+            for(int i = l; i <= r; i++){
+                if(optype[i] == 0){
+                    int p = dsgt2.getval(dsgt2.root, 0, n, opl[i]);
+                    opH.emplace_back(p, opl[i]);
+                    dsgt.upmax(dsgt.root, 0, n, p, n - opl[i] - 1, opl[i] + 1);
+                } else {
+                    int p = dsgt.getval(dsgt.root, 0, n, opl[i]);
+                    opV.emplace_back(p, opl[i]);
+                    dsgt2.upmax(dsgt2.root, 0, n, p, n - opl[i] - 1, opl[i] + 1);
+                }
             }
-        }
 
-        // 划分好管辖领域后，两类操作相互独立。先处理 opH
-        dsgt.clear();
-        sort(opH.begin(), opH.end());
-        sort(qry[o].begin(), qry[o].end(), cmpx);
-        auto jt = opH.begin();
-        for(int i : qry[o]){
-            for(; jt != opH.end() && jt->first <= qdirt[i].x; ++jt)
-                dsgt.upmax(dsgt.root, 0, n, 0, jt->second, n - jt->second);
-            qtmp[i].x = max(qdirt[i].x, dsgt.getval(dsgt.root, 0, n, qdirt[i].y));
-        }
+            // 划分好管辖领域后，两类操作相互独立。先处理 opH
+            dsgt.clear();
+            sort(opH.begin(), opH.end());
+            sort(qry[o].begin(), qry[o].end(), cmpx);
+            auto jt = opH.begin();
+            for(int i : qry[o]){
+                for(; jt != opH.end() && jt->first <= qdirt[i].x; ++jt)
+                    dsgt.upmax(dsgt.root, 0, n, 0, jt->second, n - jt->second);
+                qtmp[i].x = max(qdirt[i].x, dsgt.getval(dsgt.root, 0, n, qdirt[i].y));
+            }
 
-        // 再处理 opV
-        dsgt.clear();
-        sort(opV.begin(), opV.end());
-        sort(qry[o].begin(), qry[o].end(), cmpy);
-        jt = opV.begin();
-        for(int i : qry[o]){
-            for(; jt != opV.end() && jt->first <= qdirt[i].y; ++jt)
-                dsgt.upmax(dsgt.root, 0, n, 0, jt->second, n - jt->second);
-            qtmp[i].y = max(qdirt[i].y, dsgt.getval(dsgt.root, 0, n, qdirt[i].x));
-        }
+            // 再处理 opV
+            dsgt.clear();
+            sort(opV.begin(), opV.end());
+            sort(qry[o].begin(), qry[o].end(), cmpy);
+            jt = opV.begin();
+            for(int i : qry[o]){
+                for(; jt != opV.end() && jt->first <= qdirt[i].y; ++jt)
+                    dsgt.upmax(dsgt.root, 0, n, 0, jt->second, n - jt->second);
+                qtmp[i].y = max(qdirt[i].y, dsgt.getval(dsgt.root, 0, n, qdirt[i].x));
+            }
 
-        // 把算出来的 x、y 坐标拷贝回 qdirt 里
-        for(int i : qry[o]) qdirt[i] = qtmp[i];
+            // 把算出来的 x、y 坐标拷贝回 qdirt 里
+            for(int i : qry[o]) qdirt[i] = qtmp[i];
+        }
     }
 
     if(l == r) return;
@@ -132,16 +174,19 @@ void solve(int o, int l, int r){
 }
 
 int main(){
-    freopen("clean.in", "r", stdin);
-    freopen("clean.out", "w", stdout);
     int m, q;
-    scanf("%d%d%d", &n, &m, &q);
+    n = IO::read();
+    m = IO::read();
+    q = IO::read();
     dcnt = m;
-    for(int i = 1; i <= m; i++)
-        scanf("%d%d", &dirt[i].x, &dirt[i].y);
+    for(int i = 1; i <= m; i++){
+        dirt[i].x = IO::read();
+        dirt[i].y = IO::read();
+    }
     for(int i = 1; i <= q; i++){
         int t, x, y;
-        scanf("%d%d", &t, &x);
+        t = IO::read();
+        x = IO::read();
         if(t == 1){
             qdirt[++qcnt] = dirt[x];
             qst[qcnt] = dtime[x] + 1;
@@ -150,8 +195,7 @@ int main(){
             optype[++opcnt] = t - 2;
             opl[opcnt] = x;
         } else {
-            assert(t == 4);
-            scanf("%d", &y);
+            y = IO::read();
             dirt[++dcnt] = Point(x, y);
             dtime[dcnt] = opcnt;
         }
@@ -165,7 +209,11 @@ int main(){
         solve(1, 1, opcnt);
     }
 
-    for(int i = 1; i <= qcnt; i++)
-        printf("%d %d\n", qdirt[i].x, qdirt[i].y);
+    for(int i = 1; i <= qcnt; i++){
+        IO::print(qdirt[i].x);
+        IO::putc(' ');
+        IO::print(qdirt[i].y);
+        IO::putc('\n');
+    }
     return 0;
 }
