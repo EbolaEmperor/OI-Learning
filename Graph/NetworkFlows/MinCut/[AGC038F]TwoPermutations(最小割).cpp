@@ -155,6 +155,7 @@ signed main(){
     return 0;
 }
 
+
 // 下面也是一种正确的建模方法，它就是把所有的 bigM 边都删掉了，我暂时想不到怎么解释。
 // signed main(){
 //     scanf("%lld", &n);
@@ -184,5 +185,41 @@ signed main(){
 //         }
 //     }
 //     cout << n - g.minCut() << endl;
+//     return 0;
+// }
+
+
+// 下面是另一种建模方法：用线性规划建模，然后转为最小割规划的形式
+// signed main(){
+//     const int inf = 0x3f3f3f3f;
+//     scanf("%lld", &n);
+//     DSU dsuP(n), dsuQ(n);
+//     for(int i = 1; i <= n; i++){
+//         scanf("%lld", p + i); ++p[i];
+//         dsuP.merge(i, p[i]);
+//     }
+//     for(int i = 1; i <= n; i++){
+//         scanf("%lld", q + i); ++q[i];
+//         dsuQ.merge(i, q[i]);
+//     }
+//     g.init(n, n);
+//     int case1 = 0;
+//     for(int i = 1; i <= n; i++){
+//         int cp = dsuP.find(i), cq = dsuQ.find(i) + n;
+//         if(p[i] == i && q[i] == i) ++case1;
+//         else if(p[i] == q[i] && p[i] != i){
+//             g.addEdge(cp, cq, 1);
+//             g.addEdge(cq, cp, 1);
+//         } else if(p[i] == i && q[i] != i){
+//             g.addEdge(g.source, cp, inf);
+//             g.addEdge(cp, cq, 1);
+//         } else if(q[i] == i && p[i] != i){
+//             g.addEdge(cq, g.sink, inf);
+//             g.addEdge(cp, cq, 1);
+//         } else {
+//             g.addEdge(cp, cq, 1);
+//         }
+//     }
+//     cout << n - case1 - g.minCut() << endl;
 //     return 0;
 // }
