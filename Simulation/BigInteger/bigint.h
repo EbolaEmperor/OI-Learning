@@ -146,6 +146,17 @@ public:
     bigint operator - (const bigint &b) const{
         return (*this) + -b;
     }
+    bigint operator << (long long x) const{
+        if(x < 0){
+            std::cerr << "Math Error" << std::endl;
+            exit(-1);
+        }
+        if(x == 0) return *this;
+        bigint ans = *this;
+        while(x % 32) ans = ans * 2, --x;
+        ans.num.insert(ans.num.begin(), x / 32, 0);
+        return ans;
+    }
     bigint operator * (const long long &x) const{
         if(x==0 || iszero()) return bigint();
         if(!isneg() && x>0){
