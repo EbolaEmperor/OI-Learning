@@ -23,14 +23,14 @@ public:
         }
     }
     int log(int b) const{
-        int now = 1; LL d, y;
-        for(int i = 0; i * sq < ha; i++){
+        LL now = 1, d, y;
+        for(LL i = 0; i * sq < ha; i++){
             ExGcd(now, ha, d, y);
             d = (d % ha + ha) % ha;
-            d = (LL) d * b % ha;
+            d = d * b % ha;
             auto it = save.find(d);
             if(it != save.end()) return i * sq + it->second;
-            now = (LL) base * now % ha;
+            now = base * now % ha;
         }
         return -1;
     }
