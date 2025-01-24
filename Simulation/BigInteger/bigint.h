@@ -23,12 +23,6 @@ int debug = 0;
 class bigint{
 private:
     std::vector<unsigned> num;
-    bool isneg() const{
-        return (num.back()>>31)&1;
-    }
-    bool iszero() const{
-        return num.size()==1 && num[0]==0;
-    }
     void removeprezero(){
         while(num.size()>=2 && num.back()==0 && (num[num.size()-2]>>31)==0)
             num.pop_back();
@@ -77,6 +71,20 @@ public:
     }
     ~bigint(){
         num.clear();
+    }
+
+    // 判定性质
+    bool isneg() const{
+        return (num.back()>>31)&1;
+    }
+    bool iszero() const{
+        return num.size()==1 && num[0]==0;
+    }
+    bool isodd() const{
+        return num[0] & 1;
+    }
+    bool iseven() const{
+        return !isodd();
     }
 
     // 基础运算
@@ -398,8 +406,19 @@ public:
         return isneg() ? -res : res;
     }
 
-    friend bigint gcd(const bigint &a, const bigint &b){
-        return b.iszero() ? a : gcd(b,a%b);
+    friend bigint gcd(bigint a, bigint b){
+        bigint ans = 1;
+        while(true){
+            if(a.iszero()) return b * ans;
+            if(b.iszero()) return a * ans;
+            if(a.isodd() && b.iseven()) b = b / 2;
+            else if(a.iseven() && b.isodd()) a = a / 2;
+            else if(a.iseven() && b.iseven()) a = a / 2, b = b / 2, ans = ans * 2;
+            else{
+                if(a > b) a = a - b;
+                else b = b - a;
+            }
+        }
     }
 };
 
