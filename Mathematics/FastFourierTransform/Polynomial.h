@@ -7,8 +7,12 @@ const int Mod = 998244353;
 const int unitImage = 86583718;
 const int inv2 = (Mod + 1) / 2;
 
+random_device seed;
+mt19937 rnd(seed());
+
 int Pow(int a, int b);
 void NTT(int *a, int len, bool INTT);
+int sqrtMod(int n);
 
 class Polynomial{
 private:
@@ -91,6 +95,35 @@ void NTT(int *a, int len, bool INTT){
         int inv = Pow(len, Mod - 2);
         for(int i = 0; i < len; i++) a[i] = 1ll * a[i] * inv % Mod;
     }
+}
+
+int CompW;
+struct CompMod{
+    int r, i;
+    CompMod(int _r=0, int _i=0): r(_r), i(_i){}
+    friend CompMod operator * (const CompMod &a, const CompMod &b){
+        return CompMod((1ll * a.r * b.r + 1ll * a.i * b.i % Mod * CompW) % Mod,
+                       (1ll * a.r * b.i + 1ll * a.i * b.r) % Mod);
+    }
+    friend CompMod operator ^ (CompMod a, int b){
+        CompMod ans(1, 0);
+        for(; b; b >>= 1, a = a * a)
+            if(b & 1) ans = ans * a;
+        return ans;
+    }
+};
+
+int sqrtMod(int n){
+    if(n == 1) return 1;
+    const int p = Mod; int a;
+    if(Pow(n, (p - 1) / 2) == p-1) return -1;
+    do{
+        a = rnd() % p;
+        CompW = (1ll * a * a - n + p) % p;
+    } while(Pow(CompW, (p - 1) / 2) != p - 1);
+    CompMod t = CompMod(a, 1) ^ ((p + 1) / 2);
+    int x1 = t.r, x2 = p - x1;
+    return min(x1, x2);
 }
 
 Polynomial::Polynomial(const int &_n){
@@ -270,9 +303,8 @@ Polynomial exp(const Polynomial &p, int n = -1){
 }
 
 Polynomial sqrt(const Polynomial &p, int n = -1){
-    assert(p[0] == 1);
     if(n == -1) n = p.n + 1;
-    if(n == 1) return constPoly(1);
+    if(n == 1) return constPoly(sqrtMod(p[0]));
     auto g0 = sqrt(p, (n + 1) >> 1).resize(n - 1);
     Polynomial f(n - 1, p.a);
     return (g0 + inv(g0) * f).resize(n - 1) * inv2;
