@@ -1,8 +1,10 @@
+// Dual Kantorovich problem.
 #include <bits/stdc++.h>
 using namespace std;
 
-const int N = 5010;
+const int N = 205;
 const int M = 100005;
+const int inf = 0x3f3f3f3f;
 
 template <typename fl,typename co> 
 class MincostMaxflow
@@ -69,18 +71,25 @@ public:
         memset(h, -1, sizeof(h));
     }
 };
+MincostMaxflow<int, int> mcmf;
 
 int main(){
-	int n, m, s, t;
-	scanf("%d%d%d%d", &n, &m, &s, &t);
-	MincostMaxflow<int, long long> g;
-	g.init(s, t);
-	for(int i = 1; i <= m; i++){
-		int u, v, w; long long f;
-		scanf("%d%d%d%lld", &u, &v, &w, &f);
-		g.add_edge(u, v, w, f);
-	}
-	auto [maxflow, mincost] = g.MCMF();
-	printf("%d %lld\n", maxflow, mincost);
-	return 0;
+    int n1, n2;
+    cin >> n1 >> n2;
+    mcmf.init(0, n1 + n2 + 1);
+    for(int i = 1, a; i <= n1; i++){
+        cin >> a;
+        mcmf.add_edge(0, i, a, 0);
+    }
+    for(int i = 1, b; i <= n2; i++){
+        cin >> b;
+        mcmf.add_edge(n1 + i, n1 + n2 + 1, b, 0);
+    }
+    for(int i = 1, c; i <= n1; i++)
+        for(int j = 1; j <= n2; j++){
+            cin >> c;
+            mcmf.add_edge(i, n1 + j, inf, -c);
+        }
+    cout << -mcmf.MCMF().second << endl;
+    return 0;
 }

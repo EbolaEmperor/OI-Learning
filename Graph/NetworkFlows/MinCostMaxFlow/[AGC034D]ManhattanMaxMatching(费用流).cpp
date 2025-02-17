@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-const int N = 5010;
+const int N = 2010;
 const int M = 100005;
 
 template <typename fl,typename co> 
@@ -70,17 +70,30 @@ public:
     }
 };
 
+MincostMaxflow<int, long long> mcmf;
+
 int main(){
-	int n, m, s, t;
-	scanf("%d%d%d%d", &n, &m, &s, &t);
-	MincostMaxflow<int, long long> g;
-	g.init(s, t);
-	for(int i = 1; i <= m; i++){
-		int u, v, w; long long f;
-		scanf("%d%d%d%lld", &u, &v, &w, &f);
-		g.add_edge(u, v, w, f);
-	}
-	auto [maxflow, mincost] = g.MCMF();
-	printf("%d %lld\n", maxflow, mincost);
-	return 0;
+    int n;
+    scanf("%d", &n);
+    mcmf.init(0, 2 * n + 5);
+    for(int i = 1; i <= n; i++){
+        int x, y, c;
+        scanf("%d%d%d", &x, &y, &c);
+        mcmf.add_edge(0, i, c, 0);
+        mcmf.add_edge(i, 2 * n + 1, c, x + y);
+        mcmf.add_edge(i, 2 * n + 2, c, x - y);
+        mcmf.add_edge(i, 2 * n + 3, c, -x + y);
+        mcmf.add_edge(i, 2 * n + 4, c, -x - y);
+    }
+    for(int i = 1; i <= n; i++){
+        int x, y, c;
+        scanf("%d%d%d", &x, &y, &c);
+        mcmf.add_edge(i + n, 2 * n + 5, c, 0);
+        mcmf.add_edge(2 * n + 1, i + n, c, -x - y);
+        mcmf.add_edge(2 * n + 2, i + n, c, -x + y);
+        mcmf.add_edge(2 * n + 3, i + n, c, x - y);
+        mcmf.add_edge(2 * n + 4, i + n, c, x + y);
+    }
+    cout << -mcmf.MCMF().second << endl;
+    return 0;
 }
