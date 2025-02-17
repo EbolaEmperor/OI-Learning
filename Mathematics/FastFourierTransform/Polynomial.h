@@ -4,6 +4,8 @@
 using namespace std;
 
 const int Mod = 998244353;
+const int unitImage = 86583718;
+const int inv2 = (Mod + 1) / 2;
 
 int Pow(int a, int b);
 void NTT(int *a, int len, bool INTT);
@@ -12,7 +14,8 @@ class Polynomial{
 private:
     int n;
     int *a;
-    void resize(int _n);
+    Polynomial& resize(int _n);
+    Polynomial& leftmove(int k);
 
 public:
     Polynomial(): n(-1), a(nullptr){}
@@ -27,14 +30,26 @@ public:
 
     Polynomial& operator = (const Polynomial &rhs);
     Polynomial operator + (const Polynomial &rhs) const;
+    Polynomial operator - (const Polynomial &rhs) const;
+    Polynomial operator - () const;
+    Polynomial operator * (int k) const;
     Polynomial operator * (const Polynomial &rhs) const;
-    friend Polynomial pow(Polynomial lhs, int b);
+    friend Polynomial pow(Polynomial lhs, int kk, int b);
     Polynomial derivative() const;
     Polynomial integral() const;
 
-    friend Polynomial inv(const Polynomial &p, int deg);
+    friend Polynomial inv(const Polynomial &p, int n);
     friend Polynomial log(const Polynomial &p);
-    friend Polynomial exp(const Polynomial &p);
+    friend Polynomial exp(const Polynomial &p, int n);
+    friend Polynomial sqrt(const Polynomial &p, int n);
+
+    friend Polynomial sin(const Polynomial &p);
+    friend Polynomial cos(const Polynomial &p);
+    friend Polynomial tan(const Polynomial &p);
+
+    friend Polynomial asin(const Polynomial &p);
+    friend Polynomial acos(const Polynomial &p);
+    friend Polynomial atan(const Polynomial &p);
 };
 
 
@@ -101,16 +116,28 @@ Polynomial::~Polynomial(){
     n = 0;
 }
 
-void Polynomial::resize(int _n){
-    if(_n == n) return;
+Polynomial& Polynomial::resize(int _n){
+    if(_n == n) return *this;
     else if(_n < n) n = _n;
     else {
         int *p = a;
         a = new int[_n + 1];
         memcpy(a, p, sizeof(int) * (n + 1));
         memset(a + n + 1, 0, sizeof(int) * (_n - n));
+        n = _n;
         delete[] p;
     }
+    return *this;
+}
+
+Polynomial& Polynomial::leftmove(int k){
+    int *p = a;
+    a = new int[n + k + 1];
+    memset(a, 0, sizeof(int) * k);
+    memcpy(a + k, p, sizeof(int) * (n + 1));
+    delete[] p;
+    n = n + k;
+    return *this;
 }
 
 Polynomial& Polynomial::operator= (const Polynomial &rhs){
@@ -129,8 +156,37 @@ Polynomial Polynomial::operator + (const Polynomial &rhs) const{
     return res;
 }
 
+Polynomial Polynomial::operator - (const Polynomial &rhs) const{
+    Polynomial res(std::max(n, rhs.n));
+    for(int i = 0; i <= n; i++)
+        res[i] = (*this)[i];
+    for(int i = 0; i <= rhs.n; i++)
+        res[i] = (res[i] - rhs[i] + Mod) % Mod;
+    return res;
+}
+
+Polynomial Polynomial::operator - () const{
+    Polynomial res(n);
+    for(int i = 0; i <= n; i++)
+        res[i] = ((*this)[i] ? Mod - (*this)[i] : 0);
+    return res;
+}
+
+Polynomial Polynomial::operator * (int k) const{
+    Polynomial res = *this;
+    for(int i = 0; i <= n; i++)
+        res[i] = 1ll * k * res[i] % Mod;
+    return res;
+}
+
 Polynomial Polynomial::operator * (const Polynomial &rhs) const{
     Polynomial res(n + rhs.n);
+    if(res.n <= 5){
+        for(int i = 0; i <= n; i++)
+            for(int j = 0; j <= rhs.n; j++)
+                res[i + j] = (res[i + j] + 1ll * a[i] * rhs[j]) % Mod;
+        return res;
+    }
     int len = 1;
     while(len <= n + rhs.n) len <<= 1;
     int *f = new int[len];
@@ -147,14 +203,6 @@ Polynomial Polynomial::operator * (const Polynomial &rhs) const{
         res[i] = f[i];
     delete[] f;
     delete[] g;
-    return res;
-}
-
-Polynomial pow(Polynomial a, int b){
-    Polynomial res(1);
-    res[0] = 1;
-    for(;b; b >>= 1, a = a * a)
-        if(b & 1) res = res * a;
     return res;
 }
 
@@ -193,34 +241,84 @@ Polynomial Polynomial::integral() const{
     return res;
 }
 
-Polynomial inv(const Polynomial &p, int n = -1){
-    if(n == -1) n = p.n + 1;
-    if(n == 1){
-        Polynomial res(0);
-        res[0] = Pow(p[0], Mod - 2);
-        return res;
-    }
-    auto b = inv(p, (n + 1) >> 1);
-    int len = 1;
-    while(len < n * 2) len <<= 1;
-    int *c = new int[len];
-    int *d = new int[len];
-    memcpy(c, p.a, sizeof(int) * n);
-    memset(c + n, 0, sizeof(int) * (len - n));
-    memcpy(d, b.a, sizeof(int) * (b.n + 1));
-    memset(d + b.n + 1, 0, sizeof(int) * (len - b.n - 1));
-    NTT(c, len, 0); NTT(d, len, 0);
-    for(int i = 0; i < len; i++)
-        d[i] = 1ll * (2ll - 1ll * c[i] * d[i] % Mod + Mod) % Mod * d[i] % Mod;
-    NTT(d, len, 1);
-    Polynomial res(n - 1, d);
-    delete[] c;
-    delete[] d;
+Polynomial constPoly(int x = 0){
+    Polynomial res(0);
+    res[0] = x;
     return res;
 }
 
+Polynomial inv(const Polynomial &p, int n = -1){
+    if(n == -1) n = p.n + 1;
+    if(n == 1) return constPoly(Pow(p[0], Mod - 2));
+    auto g0 = inv(p, (n + 1) >> 1);
+    Polynomial f(n - 1, p.a);
+    return (g0 * 2 - g0 * g0 * f).resize(n - 1);
+}
+
 Polynomial log(const Polynomial &p){
-    auto h = (p.derivative() * inv(p)).integral();
-    h.resize(p.n);
-    return h;
+    assert(p[0] == 1);
+    return (p.derivative() * inv(p)).integral().resize(p.n);
+}
+
+Polynomial exp(const Polynomial &p, int n = -1){
+    assert(p[0] == 0);
+    if(n == -1) n = p.n + 1;
+    if(n == 1) return constPoly(1);
+    auto g0 = exp(p, (n + 1) >> 1).resize(n - 1);
+    Polynomial f(n - 1, p.a);
+    return (g0 * (constPoly(1) - log(g0) + f)).resize(n - 1);
+}
+
+Polynomial sqrt(const Polynomial &p, int n = -1){
+    assert(p[0] == 1);
+    if(n == -1) n = p.n + 1;
+    if(n == 1) return constPoly(1);
+    auto g0 = sqrt(p, (n + 1) >> 1).resize(n - 1);
+    Polynomial f(n - 1, p.a);
+    return (g0 + inv(g0) * f).resize(n - 1) * inv2;
+}
+
+Polynomial pow(Polynomial a, int kk, int b){
+    if(a[0] == 1){
+        return exp(log(a) * kk);
+    } else if(a[0]){
+        int a0 = a[0];
+        a = a * Pow(a0, Mod - 2);
+        a = pow(a, kk, b);
+        return a * Pow(a0, b);
+    } else {
+        int t = 0;
+        while(t <= a.n && a[t] == 0) t++;
+        if(t > a.n) return a;
+        Polynomial f(a.n - t, a.a + t);
+        long long lmv = min(1ll * t * b, 1ll * a.n + 1);
+        return pow(f, kk, b).leftmove(lmv).resize(a.n);
+    }
+}
+
+Polynomial sin(const Polynomial &p){
+    return (exp(p * unitImage) - exp(p * (Mod - unitImage)))
+             * Pow(2 * unitImage % Mod, Mod - 2);
+}
+
+Polynomial cos(const Polynomial &p){
+    return (exp(p * unitImage) + exp(p * (Mod - unitImage))) * inv2;
+}
+
+Polynomial tan(const Polynomial &p){
+    return (sin(p) * inv(cos(p))).resize(p.n);
+}
+
+Polynomial asin(const Polynomial &p){
+    return (p.derivative() * inv(sqrt(constPoly(1) - (p * p).resize(p.n))))
+            .resize(p.n).integral().resize(p.n);
+}
+
+Polynomial acos(const Polynomial &p){
+    return -asin(p);
+}
+
+Polynomial atan(const Polynomial &p){
+    return (p.derivative() * inv(constPoly(1) + (p * p).resize(p.n)))
+            .resize(p.n).integral().resize(p.n);
 }
