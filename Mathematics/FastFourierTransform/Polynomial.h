@@ -18,8 +18,6 @@ class Polynomial{
 private:
     int n;
     int *a;
-    Polynomial& resize(int _n);
-    Polynomial& leftmove(int k);
 
 public:
     Polynomial(): n(-1), a(nullptr){}
@@ -32,13 +30,17 @@ public:
     int operator [] (int i) const;
     int& operator [] (int i);
 
+    Polynomial& resize(int _n);
+    Polynomial& leftmove(int k);
+    Polynomial& reverse();
+
     Polynomial& operator = (const Polynomial &rhs);
     Polynomial operator + (const Polynomial &rhs) const;
     Polynomial operator - (const Polynomial &rhs) const;
     Polynomial operator - () const;
     Polynomial operator * (int k) const;
     Polynomial operator * (const Polynomial &rhs) const;
-    friend Polynomial pow(Polynomial lhs, int kk, int b);
+    friend Polynomial pow(Polynomial lhs, int b);
     Polynomial derivative() const;
     Polynomial integral() const;
 
@@ -54,6 +56,8 @@ public:
     friend Polynomial asin(const Polynomial &p);
     friend Polynomial acos(const Polynomial &p);
     friend Polynomial atan(const Polynomial &p);
+
+    pair<Polynomial, Polynomial> divmod(const Polynomial &p) const;
 };
 
 
@@ -170,6 +174,11 @@ Polynomial& Polynomial::leftmove(int k){
     memcpy(a + k, p, sizeof(int) * (n + 1));
     delete[] p;
     n = n + k;
+    return *this;
+}
+
+Polynomial& Polynomial::reverse(){
+    std::reverse(a, a + n + 1);
     return *this;
 }
 
@@ -310,13 +319,13 @@ Polynomial sqrt(const Polynomial &p, int n = -1){
     return (g0 + inv(g0) * f).resize(n - 1) * inv2;
 }
 
-Polynomial pow(Polynomial a, int kk, int b){
+Polynomial pow(Polynomial a, int b){
     if(a[0] == 1){
-        return exp(log(a) * kk);
+        return exp(log(a) * b);
     } else if(a[0]){
         int a0 = a[0];
         a = a * Pow(a0, Mod - 2);
-        a = pow(a, kk, b);
+        a = pow(a, b);
         return a * Pow(a0, b);
     } else {
         int t = 0;
@@ -324,7 +333,7 @@ Polynomial pow(Polynomial a, int kk, int b){
         if(t > a.n) return a;
         Polynomial f(a.n - t, a.a + t);
         long long lmv = min(1ll * t * b, 1ll * a.n + 1);
-        return pow(f, kk, b).leftmove(lmv).resize(a.n);
+        return pow(f, b).leftmove(lmv).resize(a.n);
     }
 }
 
@@ -353,4 +362,14 @@ Polynomial acos(const Polynomial &p){
 Polynomial atan(const Polynomial &p){
     return (p.derivative() * inv(constPoly(1) + (p * p).resize(p.n)))
             .resize(p.n).integral().resize(p.n);
+}
+
+pair<Polynomial, Polynomial> Polynomial::divmod(const Polynomial &g) const{
+    int m = g.n;
+    Polynomial fR = *this, gR = g;
+    fR.reverse().resize(n - m);
+    gR.reverse().resize(n - m);
+    auto q = (fR * inv(gR)).resize(n - m).reverse();
+    auto r = ((*this) - q * g).resize(m - 1);
+    return make_pair(q, r);
 }
