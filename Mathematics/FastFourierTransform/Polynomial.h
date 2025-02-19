@@ -3,6 +3,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+const int Poly_logM = 21;
 const int Mod = 998244353;
 const int unitImage = 86583718;
 const int inv2 = (Mod + 1) / 2;
@@ -66,6 +67,14 @@ public:
 
 //---------------------------------- Implemention ----------------------------------
 
+inline int modadd(int x, int y){
+    return x + y >= Mod ? x + y - Mod : x + y;
+}
+
+inline int modsub(int x, int y){
+    return x - y < 0 ? x - y + Mod : x - y;
+}
+
 int Pow(int a, int b){
     int ans = 1;
     for(; b; b >>= 1, a = 1ll * a * a % Mod)
@@ -81,17 +90,33 @@ void NTT(int *a, int len, bool INTT){
     for(int i = 1; i < len; i++) r[i] = (r[i / 2] / 2) | ((i & 1) << (l - 1));
     for(int i = 0; i < len; i++) if(i < r[i]) swap(a[i], a[r[i]]);
     delete[] r;
-    for(int i = 1; i < len; i <<= 1){
+
+    static bool flag = false;
+    static int wn[Poly_logM][1 << Poly_logM];
+    static int iwn[Poly_logM][1 << Poly_logM];
+    if(!flag){
+        // 预处理单位根
+        flag = true;
+        for(int i = 0; i < Poly_logM; i++){
+            int p = 1 << (i + 1);
+            int g = Pow(3, (Mod - 1) / p);
+            wn[i][0] = 1;
+            for(int j = 1; j < p; j++)
+                wn[i][j] = 1ll * wn[i][j - 1] * g % Mod;
+            iwn[i][p - 1] = Pow(wn[i][p - 1], Mod - 2);
+            for(int j = p - 2; j >= 0; j--)
+                iwn[i][j] = 1ll * iwn[i][j + 1] * g % Mod;
+        }
+    }
+    
+    for(int i = 1, logi = 0; i < len; i <<= 1, logi++){
         int p = (i << 1);
-        int wn = Pow(3, (Mod - 1) / p);
-        if(INTT) wn = Pow(wn, Mod - 2);
         for(int j = 0; j < len; j += p){
-            int w = 1;
             for(int k = 0; k < i; k++){
-                int x = a[j + k], y = 1ll * w * a[i + j + k] % Mod;
-                a[j + k] = (x + y) % Mod;
-                a[i + j + k] = (x - y + Mod) % Mod;
-                w = 1ll * w * wn % Mod;
+                int w = INTT ? iwn[logi][k] : wn[logi][k];
+                int x = a[j + k], y = (long long) w * a[i + j + k] % Mod;
+                a[j + k] = modadd(x, y);
+                a[i + j + k] = modsub(x, y);
             }
         }
     }
