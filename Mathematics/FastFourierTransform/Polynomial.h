@@ -21,6 +21,7 @@ private:
     int *a;
 
 public:
+    int degree() const { return n; }
     Polynomial(): n(-1), a(nullptr){}
     Polynomial(const int &_n);
     Polynomial(const int &_n, const int *p);
@@ -41,6 +42,7 @@ public:
     Polynomial operator - () const;
     Polynomial operator * (int k) const;
     Polynomial operator * (const Polynomial &rhs) const;
+    Polynomial operator % (const Polynomial &rhs) const;
     friend Polynomial pow(Polynomial lhs, int b);
     Polynomial derivative() const;
     Polynomial integral() const;
@@ -390,6 +392,7 @@ Polynomial atan(const Polynomial &p){
 }
 
 pair<Polynomial, Polynomial> Polynomial::divmod(const Polynomial &g) const{
+    if(n < g.n) return make_pair(Polynomial(0), *this);
     int m = g.n;
     Polynomial fR = *this, gR = g;
     fR.reverse().resize(n - m);
@@ -397,4 +400,9 @@ pair<Polynomial, Polynomial> Polynomial::divmod(const Polynomial &g) const{
     auto q = (fR * inv(gR)).resize(n - m).reverse();
     auto r = ((*this) - q * g).resize(m - 1);
     return make_pair(q, r);
+}
+
+Polynomial Polynomial::operator % (const Polynomial &rhs) const{
+    if(n < rhs.n) return *this;
+    return divmod(rhs).second;
 }
