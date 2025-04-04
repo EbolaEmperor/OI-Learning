@@ -92,6 +92,7 @@ void Div(int o,int l,int r,int nl,int nr,int x)
 {
     if(l>=nl&&r<=nr&&mn[o]-D(mn[o],x)==mx[o]-D(mx[o],x))
     {
+        assert(mx[o] - mn[o] <= 1);
         int dev=mn[o]-D(mn[o],x);
         sum[o]-=1ll*dev*(r-l+1);
         tag[o]-=dev;mn[o]-=dev;mx[o]-=dev;
