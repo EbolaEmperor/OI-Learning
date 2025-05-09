@@ -1,5 +1,4 @@
 #include <bits/stdc++.h>
-#include "debug.h"
 using namespace std;
 
 struct SuffixArray {
@@ -126,9 +125,7 @@ int main() {
     for (int i = 1; i <= n; ++i) {
         int h = (i == 1) ? 0 : SA.height[i];
         val[i] = 1LL * n - SA.sa[i] + 1 - h;
-        // cout << val[i] << ' ';
     }
-    // cout << '\n';
 
     set<int> alive;                         // 仍有贡献的排名下标
     for (int i = 1; i <= n; ++i) alive.insert(i);
@@ -151,15 +148,12 @@ int main() {
         while (it != alive.end() && *it <= R) {
             int idx = *it;
             add += val[idx];
-            // cout << "erase " << idx << " " << val[idx] << " " << add << '\n';
             val[idx] = 0;
             it = alive.erase(it);           // erase 返回下一个迭代器
         }
 
         /* 处理 L 本身 */
         if (alive.count(L) && val[L] > len - SA.height[L] - 1) {
-            // cout << "ans=" << add << endl;
-            // cout << L << " " << SA.height[L] << " " << len << " " << val[L] << '\n';
             long long delta = val[L] - (len - SA.height[L] - 1);
             add += delta;
             val[L] -= delta;
@@ -168,7 +162,6 @@ int main() {
 
         cur += add;
         cout << cur << '\n';
-        // debug(alive);
     }
     return 0;
 }
