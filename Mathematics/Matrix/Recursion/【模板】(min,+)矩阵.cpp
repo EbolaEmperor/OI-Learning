@@ -11,6 +11,12 @@ struct MatrixMinPlus {
         a.resize(n, vector<int>(n, 0x3f3f3f3f));
     }
 
+    static MatrixMinPlus identity(int n) {
+        MatrixMinPlus c(n);
+        for (int i = 0; i < n; i++) c.a[i][i] = 0;
+        return c;
+    }
+
     MatrixMinPlus operator * (const MatrixMinPlus &b) const {
         const int N = a.size();
         assert(N == b.a.size());
@@ -24,8 +30,7 @@ struct MatrixMinPlus {
 
     MatrixMinPlus operator ^ (int b) const {
         const int N = a.size();
-        MatrixMinPlus c(N);
-        for (int i = 0; i < N; i++) c.a[i][i] = 0;
+        MatrixMinPlus c = identity(N);
         MatrixMinPlus aa = *this;
         for(; b; b >>= 1, aa = aa * aa)
             if (b & 1) c = c * aa;
