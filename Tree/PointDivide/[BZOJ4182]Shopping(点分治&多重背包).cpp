@@ -20,7 +20,7 @@ void add_edge(int u,int v)
     h[u]=tot;
 }
 
-int find(int u,int fa)
+void find(int u,int fa)
 {
     sz[u]=1;mx[u]=0;
     for(int tmp=h[u];tmp;tmp=e[tmp].next)
