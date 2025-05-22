@@ -38,7 +38,7 @@ int root,sum=0,msz[N],ffa[N];
 int top[N],hson[N],dep[N];
 bool done[N];
 
-int upmax(int &x,const int &y){if(y>x) x=y;}
+void upmax(int &x,const int &y){if(y>x) x=y;}
 
 int* newnode(int len)
 {
