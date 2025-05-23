@@ -1,3 +1,5 @@
+// O(n^3) 算法
+// 上 Hessenberg 化 + O(n^2) 求行列式 + Lagrange 插值
 #include<bits/stdc++.h>
 #define ha 998244353
 using namespace std;
