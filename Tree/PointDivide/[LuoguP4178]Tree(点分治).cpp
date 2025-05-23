@@ -1,91 +1,72 @@
-#include<bits/stdc++.h>
-#define INF 0x7fffffff
+#include <bits/stdc++.h>
 using namespace std;
 
-struct Edge{int to,capa,next;} e[80010];
-int h[40010],sum=0;
-int sim[40010];
-int dis[40010];
-bool done[40010];
-int mx,root,smer,sumary;
-int ans=0,k;
+const int N = 40010;
+int n, k, done[N];
+vector<pair<int, int>> G[N];
+int ans = 0, root = 0, sum = 0, sz[N], mxsz[N];
 
-void add_edge(int u,int v,int w)
-{
-	sum++;
-	e[sum].to=v;
-	e[sum].capa=w;
-	e[sum].next=h[u];
-	h[u]=sum;
+void dfs(int u, int fa, int dis, vector<int> &a) {
+    if(dis > k) return;
+    a.push_back(dis);
+    for(auto [v, w] : G[u]) {
+        if(done[v] || v == fa) continue;
+        dfs(v, u, dis + w, a);
+    }
 }
 
-void dfs(int u,int fa,int w)
-{
-	if(w>k) return;
-	dis[++sumary]=w;
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(e[tmp].to==fa||done[e[tmp].to]) continue;
-		dfs(e[tmp].to,u,w+e[tmp].capa);
+int getans(int u, int www = 0) {
+    int ans_u = 0;
+    vector<int> alldis;
+    alldis.push_back(www);
+    for(auto [v, w] : G[u])
+        if(!done[v]) dfs(v, u, www + w, alldis);
+    sort(alldis.begin(), alldis.end());
+    for (int x : alldis) {
+        auto it = upper_bound(alldis.begin(), alldis.end(), k - x);
+        ans_u += it - alldis.begin();
+	}
+    return ans_u;
+}
+
+void findroot(int u,int fa) {
+    sz[u] = 1;
+    mxsz[u] = 0;
+    for(auto [v, w] : G[u]) {
+        if(v == fa || done[v]) continue;
+        findroot(v, u);
+        sz[u] += sz[v];
+        mxsz[u] = max(mxsz[u], sz[v]);
+    }
+    mxsz[u] = max(mxsz[u], sum - sz[u]);
+    if(root == -1 || mxsz[u] < mxsz[root]) root = u;
+}
+
+void solve(int u) {
+	done[u] = 1;
+	ans += getans(u);
+	for(auto [v, w] : G[u]) {
+		if(done[v]) continue;
+        ans -= getans(v, w);
+		root = -1;
+		sum = sz[v];
+		findroot(v, 0);
+		solve(root);
 	}
 }
 
-void solve(int u,int w,int add)
-{
-	sumary=0;
-	dfs(u,0,w);
-	sort(dis+1,dis+1+sumary);
-	int i=1,j=sumary;
-	while(i<j)
-		if(dis[i]+dis[j]<=k) ans+=add*(j-i),i++;
-		else j--;
-}
-
-void GetRoot(int u,int fa)
-{
-	int mxson=0;
-	sim[u]=1;
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(done[e[tmp].to]||e[tmp].to==fa) continue;
-		GetRoot(e[tmp].to,u);
-		sim[u]+=sim[e[tmp].to];
-		mxson=max(mxson,sim[e[tmp].to]);
+int main() {
+	ios::sync_with_stdio(0);
+	cin >> n;
+	for(int i = 1; i < n; i++) {
+		int u, v, w;
+		cin >> u >> v >> w;
+		G[u].emplace_back(v, w);
+		G[v].emplace_back(u, w);
 	}
-	mxson=max(mxson,smer-sim[u]);
-	if(mxson<mx) mx=mxson,root=u;
-}
-
-void Divide(int u)
-{
-	done[u]=1;
-	solve(u,0,1);
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(done[e[tmp].to]) continue;
-		solve(e[tmp].to,e[tmp].capa,-1);
-		mx=INF;root=0;
-		smer=sim[e[tmp].to];
-		GetRoot(e[tmp].to,0);
-		Divide(root);
-	}
-}
-
-int main()
-{
-	memset(done,0,sizeof(done));
-	int n,a,b,c;
-	cin>>n;
-	for(int i=1;i<n;i++)
-	{
-		scanf("%d%d%d",&a,&b,&c);
-		add_edge(a,b,c);
-		add_edge(b,a,c);
-	}
-	cin>>k;
-	mx=INF;root=0;smer=n;
-	GetRoot(1,0);
-	Divide(root);
-	cout<<ans<<endl;
+	cin >> k;
+	root = -1; sum = n;
+	findroot(1, 0); solve(root);
+	cout << (ans - n) / 2 << endl;
 	return 0;
 }
