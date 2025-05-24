@@ -1,90 +1,85 @@
-#include<bits/stdc++.h>
-#define INF 0x7fffffff
+#include <bits/stdc++.h>
 using namespace std;
 
-struct Edge{int to,capa,next;} e[20010];
-int h[10010],tot=0,n;
-int sum[10000010];
-int sumary,smer,root,mn;
-int sim[10010];
-int dis[10010];
-bool done[10010];
+const int N = 40010, Q = 105, M = 1e7 + 5;
+int n, done[N];
+vector<pair<int, int>> G[N];
+int root = 0, sum = 0, sz[N], mxsz[N];
+bool exist[M], qans[Q];
+int q, qk[Q];
 
-void add_edge(int u,int v,int w)
-{
-	tot++;
-	e[tot].to=v;
-	e[tot].capa=w;
-	e[tot].next=h[u];
-	h[u]=tot;
+void dfs(int u, int fa, int dis, vector<int> &a) {
+    if(dis > 1e7) return;
+    a.push_back(dis);
+    for(auto [v, w] : G[u]) {
+        if(done[v] || v == fa) continue;
+        dfs(v, u, dis + w, a);
+    }
 }
 
-void GetRoot(int u,int fa)
-{
-	sim[u]=1;
-	int mxson=0;
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(e[tmp].to==fa||done[e[tmp].to]) continue;
-		GetRoot(e[tmp].to,u);
-		sim[u]+=sim[e[tmp].to];
-		mxson=max(mxson,sim[e[tmp].to]);
-	}
-	mxson=max(mxson,smer-sim[u]);
-	if(mxson<mn) mn=mxson,root=u;
+void upans(int u) {
+    vector<int> alldis;
+    alldis.push_back(0);
+    exist[0] = 1;
+    for(auto [v, w] : G[u]) {
+        if(done[v]) continue;
+        int cur = alldis.size();
+        dfs(v, u, w, alldis);
+        for(int i = 1; i <= q; i++) {
+            if(qans[i]) continue;
+            for(int j = cur; j < alldis.size(); j++) {
+                int x = alldis[j];
+                if(x > qk[i]) continue;
+                if(exist[qk[i] - x]) {
+                    qans[i] = 1;
+                    break;
+                }
+            }
+        }
+        for(int i = cur; i < alldis.size(); i++)
+            exist[alldis[i]] = 1;
+    }
+    for(int x : alldis) exist[x] = 0;
 }
 
-void dfs(int u,int fa,int w)
-{
-	dis[++sumary]=w;
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(e[tmp].to==fa||done[e[tmp].to]) continue;
-		dfs(e[tmp].to,u,w+e[tmp].capa);
-	}
+void findroot(int u,int fa) {
+    sz[u] = 1;
+    mxsz[u] = 0;
+    for(auto [v, w] : G[u]) {
+        if(v == fa || done[v]) continue;
+        findroot(v, u);
+        sz[u] += sz[v];
+        mxsz[u] = max(mxsz[u], sz[v]);
+    }
+    mxsz[u] = max(mxsz[u], sum - sz[u]);
+    if(root == -1 || mxsz[u] < mxsz[root]) root = u;
 }
 
-void solve(int u,int w,int add)
-{
-	sumary=0;
-	dfs(u,0,w);
-	for(int i=1;i<sumary;i++)
-		for(int j=i+1;j<=sumary;j++)
-			sum[dis[i]+dis[j]]+=add;
+void solve(int u) {
+    done[u] = 1;
+    upans(u);
+    for(auto [v, w] : G[u]) {
+        if(done[v]) continue;
+        root = -1;
+        sum = sz[v];
+        findroot(v, 0);
+        solve(root);
+    }
 }
 
-void Divide(int u)
-{
-	done[u]=1;
-	solve(u,0,1);
-	for(int tmp=h[u];tmp;tmp=e[tmp].next)
-	{
-		if(done[e[tmp].to]) continue;
-		solve(e[tmp].to,e[tmp].capa,-1);
-		root=0;mn=INF;smer=sim[e[tmp].to];
-		GetRoot(e[tmp].to,0);
-		Divide(root);
-	}
-}
-
-int main()
-{
-	int a,b,c,m;
-	cin>>n>>m;
-	for(int i=1;i<n;i++)
-	{
-		scanf("%d%d%d",&a,&b,&c);
-		add_edge(a,b,c);
-		add_edge(b,a,c);
-	}
-	memset(done,0,sizeof(done));
-	root=0;smer=n;mn=INF;
-	GetRoot(1,0);
-	Divide(root);
-	for(int i=1;i<=m;i++)
-	{
-		scanf("%d",&a);
-		puts(sum[a]?"AYE":"NAY");
-	}
-	return 0;
+int main() {
+    ios::sync_with_stdio(0);
+    cin >> n >> q;
+    for(int i = 1; i < n; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        G[u].emplace_back(v, w);
+        G[v].emplace_back(u, w);
+    }
+    for(int i = 1; i <= q; i++) cin >> qk[i];
+    root = -1; sum = n;
+    findroot(1, 0); solve(root);
+    for(int i = 1; i <= q; i++)
+        puts(qans[i] ? "AYE" : "NAY");
+    return 0;
 }
