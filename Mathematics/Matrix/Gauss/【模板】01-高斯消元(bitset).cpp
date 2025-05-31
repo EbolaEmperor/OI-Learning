@@ -9,7 +9,7 @@ bool Gauss(vector<bitset<N>>& a, int n) {
         int p = c;
         while (p < a.size() && !a[p][c]) p++;
         if (p == a.size()) return false;
-        swap(a[c], a[p]);
+        if (p != c) swap(a[c], a[p]);
         for (int i = 0; i < a.size(); i++)
             if (i != c && a[i][c]) a[i] ^= a[c];
     }
@@ -26,7 +26,7 @@ bool Gauss(vector<bitset<N>>& a, int n) {
             newrow[c] = newrow[n] = 1;
             a.push_back(newrow);
         }
-        if(p != c) swap(a[c], a[p]);
+        if (p != c) swap(a[c], a[p]);
         for (int i = 0; i < a.size(); i++)
             if (i != c && a[i][c]) a[i] ^= a[c];
     }
