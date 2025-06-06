@@ -49,16 +49,30 @@ void getsize()
 	for (int i = tot; i >= 1; i--) sz[prt[a[i]]] += sz[a[i]];
 }
 
+// 另一种方法是建立 parent 树，然后 DFS 求出 sz。这种方法更加灵活，可以处理更多问题
+vector<int> G[MAXN];
+void build_graph()
+{
+	for (int i = 2; i <= tot; i++)
+		G[prt[i]].push_back(i);
+}
+void dfs(int u, int fa)
+{
+	for (int v : G[u])
+		if (v != fa) dfs(v, u), sz[u] += sz[v];
+}
+
 int main()
 {
 	scanf("%s", s);
 	int l = strlen(s);
 	for (int i = 0; i < l; i++)
 		insert(s[i] - 'a');
-	getsize();
+	// getsize();
+	build_graph();
+	dfs(1, 0);
 	for (int i = 1; i <= tot; i++)
-		if (sz[i] > 1)
-			ans = max(ans, (LL)sz[i] * len[i]);
+		if (sz[i] > 1) ans = max(ans, (LL)sz[i] * len[i]);
 	cout << ans << endl;
 	return 0;
 }
