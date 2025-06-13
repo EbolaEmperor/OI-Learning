@@ -13,7 +13,7 @@ int read()
 const int N=200010;
 struct Edge{int to,next;} e[N<<1];
 int h[N],tot=0;
-int fa[N],top[N],hson[N],size[N],dep[N];
+int fa[N],top[N],hson[N],siz[N],dep[N];
 int in[N],out[N],idex[N],dfn=0;
 
 void add_edge(int u,int v)
@@ -25,15 +25,15 @@ void add_edge(int u,int v)
 
 void dfs1(int u,int f)
 {
-	size[u]=1;int mx=0;
+	siz[u]=1;int mx=0;
 	for(int tmp=h[u];tmp;tmp=e[tmp].next)
 	{
 		int v=e[tmp].to;
 		if(v==f) continue;
 		dep[v]=dep[u]+1;
 		fa[v]=u;dfs1(v,u);
-		size[u]+=size[v];
-		if(size[v]>mx) mx=size[v],hson[u]=v;
+		siz[u]+=siz[v];
+		if(siz[v]>mx) mx=siz[v],hson[u]=v;
 	}
 }
 
