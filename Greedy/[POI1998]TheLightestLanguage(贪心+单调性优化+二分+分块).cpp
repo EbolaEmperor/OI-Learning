@@ -1,4 +1,3 @@
-// 复杂度 O(n * log n * log log n)
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -24,6 +23,7 @@ typedef long long LL;
 typedef pair<LL, pair<int, int>> Point; // (权值, (行号, 列号))
 typedef pair<LL, int> PLI;
 vector<int> w, cnt, split, rec;
+vector<int> save;
 vector<LL> splitans;
 vector<LL> b;
 int n, k;
@@ -36,7 +36,7 @@ void read_w(){
         w[i] = read();
     sort(w.begin(), w.end());
     cnt.resize(2 * n + 5);
-    const int B = 1.2 * n;
+    const int B = 1.5 * n;
     int scnt = 0;
     for(int i = 0; i <= 2 * n; i++){
         cnt[i] = min(2 * n / (i + 1), k);
@@ -51,23 +51,17 @@ void read_w(){
 // 初始化 1 到 2n 号节点的权值 b[i]，则表格第 i 列第 j 行的数是 b[i] + w[j]
 void init_b(){
     b.resize(2 * n + 5, 0);
-    rec.resize(2 * n + 5, -1); rec[0] = 0;
-    priority_queue<Point, vector<Point>, greater<Point>> nodes;
-    nodes.push(make_pair(w[0], make_pair(0, 0)));
+    rec.resize(2 * n + 5, 0);
+    priority_queue<PLI, vector<PLI>, greater<PLI>> nodes;
+    nodes.push(make_pair(w[0], 0));
     for(int i = 1; i <= 2 * n; i++){
-        auto pos = nodes.top().second;
+        auto col = nodes.top().second;
+        b[i] = b[col] + w[rec[col]];
+        save.push_back(col);
         nodes.pop();
-        b[i] = b[pos.first] + w[pos.second];
-        auto pos1 = make_pair(pos.first + 1, pos.second);
-        if(rec[pos1.first] < pos1.second){
-            nodes.push(make_pair(b[pos1.first] + w[pos1.second], pos1));
-            rec[pos1.first] = pos1.second;
-        }
-        auto pos2 = make_pair(pos.first, pos.second + 1);
-        if(pos2.second < w.size() && rec[pos2.first] < pos2.second){
-            nodes.push(make_pair(b[pos2.first] + w[pos2.second], pos2));
-            rec[pos2.first] = pos2.second;
-        }
+        nodes.push(make_pair(b[i] + w[0], i));
+        if(++rec[col] < k)
+            nodes.push(make_pair(b[col] + w[rec[col]], col));
     }
 }
 
@@ -76,10 +70,11 @@ LL compute(int m){
     LL ans = 0;
     priority_queue<PLI, vector<PLI>, greater<PLI>> nodes;
     static int pos[N];
+    for(int i = 0; i < m - 1; i++) pos[save[i]]++;
     for(int i = 0; i < m; i++)
-        nodes.push(make_pair(b[i], i));
-    for(int i = 1; i < m + n; i++){
-        if(i >= m) ans += nodes.top().first;
+        if(pos[i] < k) nodes.push(make_pair(b[i] + w[pos[i]], i));
+    for(int i = 0; i < n; i++){
+        ans += nodes.top().first;
         int col = nodes.top().second;
         nodes.pop();
         if (++pos[col] < k)
@@ -96,44 +91,35 @@ LL computeSplit(int m){
 
 // 在展开 l 次的树到展开 r 次的树之间找答案
 LL babyStep(int l, int r){
-    set<Point> leafs;
+    multiset<LL> leafs;
     LL ans = INT64_MAX, sum = 0;
-    priority_queue<Point, vector<Point>, greater<Point>> nodes;
-    nodes.push(make_pair(w[0], make_pair(0, 0)));
-    rec[0] = 0;
-    for(int i = 1; i <= 2 * n; i++) rec[i] = -1;
-    for(int i = 1; i < l + n; i++){
+    priority_queue<PLI, vector<PLI>, greater<PLI>> nodes;
+    for(int i = 0; i <= 2 * n; i++) rec[i] = 0;
+    for(int i = 0; i < l - 1; i++) rec[save[i]]++;
+    for(int i = 0; i < l; i++)
+        if(rec[i] < k) nodes.push(make_pair(b[i] + w[rec[i]], i));
+    for(int i = 0; i < n; i++){
         if(nodes.empty()) break;
-        auto pos = nodes.top().second;
-        if(i >= l){
-            leafs.insert(nodes.top());
-            sum += b[pos.first] + w[pos.second];
-        }
+        auto [val, col] = nodes.top();
+        leafs.insert(val);
+        sum += val;
         nodes.pop();
-        auto pos1 = make_pair(pos.first + 1, pos.second);
-        if(pos1.first < l && rec[pos1.first] < pos1.second){
-            nodes.push(make_pair(b[pos1.first] + w[pos1.second], pos1));
-            rec[pos1.first] = pos1.second;
-        }
-        auto pos2 = make_pair(pos.first, pos.second + 1);
-        if(pos2.second < w.size() && rec[pos2.first] < pos2.second){
-            nodes.push(make_pair(b[pos2.first] + w[pos2.second], pos2));
-            rec[pos2.first] = pos2.second;
-        }
+        if(++rec[col] < k)
+            nodes.push(make_pair(b[col] + w[rec[col]], col));
     }
     if(leafs.size() == n) ans = sum;
     for(int i = l; i < r; i++){
         if(leafs.empty()) break;
-        sum -= leafs.begin()->first;
+        sum -= *leafs.begin();
         leafs.erase(leafs.begin());
         for(int j = 0; j < cnt[i]; j++){
-            if(leafs.size() >= n && b[i] + w[j] >= leafs.rbegin()->first) break;
-            leafs.insert(make_pair(b[i] + w[j], make_pair(i, j)));
+            if(leafs.size() >= n && b[i] + w[j] >= *leafs.rbegin()) break;
+            leafs.insert(b[i] + w[j]);
             sum += b[i] + w[j];
         }
         while(leafs.size() > n){
             auto it = leafs.end(); --it;
-            sum -= it->first;
+            sum -= *it;
             leafs.erase(it);
         }
         if(leafs.size() == n){
@@ -147,7 +133,7 @@ LL babyStep(int l, int r){
 int main(){
     read_w();
     init_b();
-    int l = 0, r = split.size()-1, mid;
+    int l = 1, r = split.size()-1, mid;
     while(l < r){
         mid = (l + r) / 2;
         if(computeSplit(mid) == INT64_MAX
@@ -156,7 +142,6 @@ int main(){
     }
     int lft = l ? split[l-1] : 1;
     int rgt = l+1 < split.size() ? split[l+1] : 2*n;
-    return 0;
     cout << babyStep(lft, rgt) << endl;
     return 0;
 }
