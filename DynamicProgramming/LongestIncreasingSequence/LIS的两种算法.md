@@ -1,11 +1,10 @@
 ### Algorithm 1. $O(n^2)$
 
 ```cpp
-int LIS(int *a, int n)
-{
-	int ans = 0;
-	for(int i = 0; i < n; i++)
-	{
+int LIS(const vector<int> &a) {
+	int ans = 0, n = a.size();
+    vector<int> f(n, 0);
+	for(int i = 0; i < n; i++) {
 		f[i] = 1;
 		for(int j = 0; j < i; j++)
 			if(a[j] < a[i]) f[i] = max(f[i], f[j] + 1);
@@ -18,18 +17,13 @@ int LIS(int *a, int n)
 ### Algorithm 2. $O(n log n)$
 
 ```cpp
-int LIS(int *a, int n)
-{
-    int ans = 0;
-    int *g = new int[n];
-    memset(g, 0x7f, sizeof(int) * (n));
-    for(int i = 0; i < n; i++)
-    {
-        int p = lower_bound(g, g + ans, a[i]) - g;
-        ans = max(ans, p + 1);
-        g[p] = a[i];
+int LIS(const vector<int> &a) {
+    vector<int> g;
+    for(int x : a) {
+        int p = lower_bound(g.begin(), g.end(), x) - g.begin();
+        if (p == g.size()) g.push_back(x);
+        else g[p] = x;
     }
-    delete[] g;
-    return ans;
+    return g.size();
 }
 ```
