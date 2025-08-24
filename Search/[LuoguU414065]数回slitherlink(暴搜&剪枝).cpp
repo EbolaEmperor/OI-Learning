@@ -1,3 +1,5 @@
+// 这是我纯手写的代码，利用数字 2 和 3 的特性进行剪枝，效果被 ChatGPT 暴打
+// 可以看这个文件夹里的另一份本题代码，由 ChatGPT 生成的
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -45,7 +47,7 @@ void goright(const int &i, const int &j, const int &step, const int &dir){
 }
 
 bool dfs(int i, int j, int step){
-    if(++cc % 100000000 == 0) cout << "dfs cycle: " << cc << endl;
+    if(++cc % 100000000 == 0) cerr << "dfs cycle: " << cc << endl;
 
     if(i==si && j==sj && step){
         path[step] = '\0';
