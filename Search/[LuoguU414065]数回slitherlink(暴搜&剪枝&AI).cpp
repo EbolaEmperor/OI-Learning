@@ -177,6 +177,39 @@ void dfs(int x, int y){
     }
 }
 
+
+// ========== 新增：用字符画渲染答案，输出到 cerr ==========
+void render_ascii(){
+    // 画布：顶点与边交替 => 尺寸 (2*m+1) x (2*n+1)
+    int R = 2*m + 1, C = 2*n + 1;
+    vector<string> canvas(R, string(C, ' '));
+
+    // 顶点
+    for (int i=0;i<=m;++i)
+        for (int j=0;j<=n;++j)
+            canvas[2*i][2*j] = '.';
+
+    // 数字
+    for (int i=0;i<m;++i)
+        for (int j=0;j<n;++j)
+            if (num[i][j] >= 0)
+                canvas[2*i+1][2*j+1] = char('0' + num[i][j]);
+
+    // 已选边
+    for (int i=0;i<=m;++i)
+        for (int j=0;j<n;++j)
+            if (H[i][j]) canvas[2*i][2*j+1] = '-';
+
+    for (int i=0;i<m;++i)
+        for (int j=0;j<=n;++j)
+            if (V[i][j]) canvas[2*i+1][2*j] = '|';
+
+    // 打印
+    cerr << "=========================================" << endl;
+    for (auto &row: canvas) cerr << row << "\n";
+    cerr.flush();
+}
+
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
@@ -209,5 +242,9 @@ int main() {
 
     // 输出（题目保证有解；若意外未找到，则输出空串）
     cout << bestAns << '\n';
+
+    // 仅供人类查看：stderr（字符画）
+    if (!bestAns.empty()) render_ascii();
+    else { cerr << "No solution found.\n"; }
     return 0;
 }
