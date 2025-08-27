@@ -1,18 +1,9 @@
-#include <iostream>
-#include <cstring>
-#include <cstdio>
-#include <ctype.h>
-#include <iomanip>
-#include <stack>
-#include <vector>
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
+#include <bits/stdc++.h>
 using namespace std;
 
 void err(){
     cout << "ILLEGAL" << endl;
-    exit(-1);
+    exit(0);
 }
 
 struct Node{
