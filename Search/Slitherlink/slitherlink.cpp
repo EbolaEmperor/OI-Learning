@@ -191,10 +191,11 @@ inline bool isDiff(const Slither &now, int i, int j, int i0, int j0) {
 
 bool applyRules(Slither &now) {
     bool cg = true;
+    auto [i0, j0] = findFirst(now, UNKNOWN);
     while(cg) {
         cg = false;
-
-        FORCELL {
+        for (int i = max(1, i0-1); i <= n; i++)
+        for (int j = 1; j <= m; j++) {
             // 数字 0 必须和他周围四个格子在同一个 region 里
             if (board[i][j] == '0')
                 FORADJ4 if(!assertSame(now, i, j, ADJX, ADJY, cg))
