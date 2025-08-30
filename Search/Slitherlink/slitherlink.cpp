@@ -273,21 +273,27 @@ bool applyRules(Slither &now) {
             }
 
             /*
+                .   .   .
+                    x 
                 +   +   +  
                 | 3 | 3 | 
                 +   +   +
+                    x   
+                .   .   .
             */
             if (board[i][j] == '3' && board[i][j+1] == '3') {
                 if (CUR != UNKNOWN || now[i][j-1] != UNKNOWN || now[i][j+1] != UNKNOWN || now[i][j+2] != UNKNOWN) {
                     if (!assertDiff(now, i, j-1, i, j, cg) || !assertSame(now, i, j-1, i, j+1, cg) || !assertDiff(now, i, j-1, i, j+2, cg) ||
-                        !assertDiff(now, i, j, i, j+1, cg) || !assertSame(now, i, j, i, j+2, cg) || !assertDiff(now, i, j+1, i, j+2, cg))
+                        !assertDiff(now, i, j, i, j+1, cg) || !assertSame(now, i, j, i, j+2, cg) || !assertDiff(now, i, j+1, i, j+2, cg) ||
+                        !assertSame(now, i-1, j, i-1, j+1, cg) || !assertSame(now, i+1, j, i+1, j+1, cg))
                         return false;
                 }
             }
             if (board[i][j] == '3' && board[i+1][j] == '3') {
                 if (CUR != UNKNOWN || now[i-1][j] != UNKNOWN || now[i+1][j] != UNKNOWN || now[i+2][j] != UNKNOWN) {
                     if (!assertDiff(now, i-1, j, i, j, cg) || !assertSame(now, i-1, j, i+1, j, cg) || !assertDiff(now, i-1, j, i+2, j, cg) ||
-                        !assertDiff(now, i, j, i+1, j, cg) || !assertSame(now, i, j, i+2, j, cg) || !assertDiff(now, i+1, j, i+2, j, cg))
+                        !assertDiff(now, i, j, i+1, j, cg) || !assertSame(now, i, j, i+2, j, cg) || !assertDiff(now, i+1, j, i+2, j, cg) ||
+                        !assertSame(now, i, j-1, i+1, j-1, cg) || !assertSame(now, i, j+1, i+1, j+1, cg))
                         return false;
                 }
             }
