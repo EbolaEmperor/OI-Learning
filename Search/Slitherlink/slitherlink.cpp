@@ -271,6 +271,26 @@ bool applyRules(Slither &now) {
                     }
                 }
             }
+            //        +     +     +     +     +     +                    +     +     +     +     +     +  
+            //                                                                       x                    
+            //        +     +     +     +     +     +                    +     +  x  +  -  +     +     +  
+            //                       3                        =>                     |  3                 
+            //        +     +     +     +     +     +                    +     +     +     +  x  +     +  
+            //                          |                                                  |              
+            //        +     +     +     +     +     +                    +     +     +     +     +     +  
+            if (board[i][j] == '3') {
+                for(int k = 0; k < 8; k += 2) {
+                    if (isDiff(now, ADJ8(k), ADJ8(k+1))) {
+                        if (!assertSame(now, ADJ8(k+1), ADJ8(k+2), cg) || !assertDiff(now, i, j, ADJ8(k+4), cg) || !assertDiff(now, i, j, ADJ8(k+6), cg) ||
+                            !assertSame(now, ADJ8(k+4), ADJ8(k+5), cg) || !assertSame(now, ADJ8(k+5), ADJ8(k+6), cg))
+                                return false;
+                    } else if (isDiff(now, ADJ8(k+1), ADJ8(k+2))) {
+                        if (!assertSame(now, ADJ8(k), ADJ8(k+1), cg) || !assertDiff(now, i, j, ADJ8(k+4), cg) || !assertDiff(now, i, j, ADJ8(k+6), cg) ||
+                            !assertSame(now, ADJ8(k+4), ADJ8(k+5), cg) || !assertSame(now, ADJ8(k+5), ADJ8(k+6), cg))
+                                return false;
+                    }
+                }
+            }
 
             /*
                 .   .   .
