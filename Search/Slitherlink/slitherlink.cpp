@@ -30,7 +30,7 @@ const int adj8[][2] = {
 vector<string> board;
 int n, m;
 
-enum Status {
+enum Status : uint8_t {
     UNKNOWN, INNER, OUTER, UNKNOWN_BFS, INNER_BFS, OUTER_BFS
 };
 typedef pair<int,int> cord;
@@ -484,10 +484,10 @@ void initalRules(Slither &now) {
     if (board[n][m] == '0') setStatus(now, n, m, OUTER), setStatus(now, n-1, m, OUTER), setStatus(now, n, m-1, OUTER);
 
     // 如果 2 出现在角落里，则周围两格必为 INNER，它自己不一定
-    if (board[1][1] == '0') setStatus(now, 1, 2, INNER),   setStatus(now, 2, 1, INNER);
-    if (board[1][m] == '0') setStatus(now, 1, m-1, INNER), setStatus(now, 2, m, INNER);
-    if (board[n][1] == '0') setStatus(now, n-1, 1, INNER), setStatus(now, n, 2, INNER);
-    if (board[n][m] == '0') setStatus(now, n-1, m, INNER), setStatus(now, n, m-1, INNER);
+    if (board[1][1] == '2') setStatus(now, 1, 2, INNER),   setStatus(now, 2, 1, INNER);
+    if (board[1][m] == '2') setStatus(now, 1, m-1, INNER), setStatus(now, 2, m, INNER);
+    if (board[n][1] == '2') setStatus(now, n-1, 1, INNER), setStatus(now, n, 2, INNER);
+    if (board[n][m] == '2') setStatus(now, n-1, m, INNER), setStatus(now, n, m-1, INNER);
 }
 
 bool solve(Slither now) {
