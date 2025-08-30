@@ -269,8 +269,18 @@ bool applyRules(Slither &now) {
                         if (!assertSame(now, i, j, ADJ8(k), cg) || !assertSame(now, i, j, ADJ8(k+2), cg))
                             return false;
                     }
+
+                    //         +     +     +     +     +                    +     +     +     +     +  
+                    //                  1                                            1                 
+                    //         +     +     +  x  +     +         =>         +     +  x  +  x  +     +  
+                    //                  1                                            1                 
+                    //         +     +     +     +     +                    +     +     +     +     +
+                    if (board[ADJ8X(k+2)][ADJ8Y(k+2)] == '1' && isSame(now, ADJ8(k), ADJ8(k+1))) {
+                        if (!assertSame(now, i, j, ADJ8(k+2), cg)) return false;
+                    }
                 }
             }
+
             //        +     +     +     +     +     +                    +     +     +     +     +     +  
             //                                                                       x                    
             //        +     +     +     +     +     +                    +     +  x  +  -  +     +     +  
@@ -289,6 +299,24 @@ bool applyRules(Slither &now) {
                             !assertSame(now, ADJ8(k+4), ADJ8(k+5), cg) || !assertSame(now, ADJ8(k+5), ADJ8(k+6), cg))
                                 return false;
                     }
+                }
+            }
+
+            //         +     +  -  +     +     +     +                    +     +  -  +     +     +     +  
+            //                        3                        =>               x        3                 
+            //         +     +  -  +     +     +     +                    +     +  -  +     +     +     + 
+            if (board[i][j] == '3') {
+                if (isDiff(now, i, j-1, i-1, j-1) && isDiff(now, i, j-1, i+1, j-1)) {
+                    if (!assertSame(now, i, j-1, i, j-2, cg)) return false;
+                }
+                if (isDiff(now, i, j+1, i-1, j+1) && isDiff(now, i, j+1, i+1, j+1)) {
+                    if (!assertSame(now, i, j+1, i, j+2, cg)) return false;
+                }
+                if (isDiff(now, i-1, j, i-1, j-1) && isDiff(now, i-1, j, i-1, j+1)) {
+                    if (!assertSame(now, i-1, j, i-2, j, cg)) return false;
+                }
+                if (isDiff(now, i+1, j, i+1, j-1) && isDiff(now, i+1, j, i+1, j+1)) {
+                    if (!assertSame(now, i+1, j, i+2, j, cg)) return false;
                 }
             }
 
@@ -350,6 +378,21 @@ bool applyRules(Slither &now) {
                 }
             }
 
+            if (board[i][j] == '3') {
+                /*
+                        .    
+                        x    
+                    +[-]+ x .
+                      3[|]    
+                        +   .
+                */
+                for (int k = 0; k < 8; k += 2)
+                    if (isSame(now, ADJ8(k), ADJ8(k+1)) && isSame(now, ADJ8(k+1), ADJ8(k+2))) {
+                        if (!assertDiff(now, i, j, ADJ8(k), cg) || !assertDiff(now, i, j, ADJ8(k+2), cg))
+                            return false;
+                    }
+            }
+
             /*
                     .   .  
                     | 3  
@@ -400,22 +443,6 @@ bool applyRules(Slither &now) {
                         return false;
                 }
             }
-
-
-            if (board[i][j] == '3') {
-                /*
-                        .    
-                        x    
-                    +[-]+ x .
-                      3[|]    
-                        +   .
-                */
-                for (int k = 0; k < 8; k += 2)
-                    if (isSame(now, ADJ8(k), ADJ8(k+1)) && isSame(now, ADJ8(k+1), ADJ8(k+2))) {
-                        if (!assertDiff(now, i, j, ADJ8(k), cg) || !assertDiff(now, i, j, ADJ8(k+2), cg))
-                            return false;
-                    }
-            }
         }
     }
 
@@ -434,6 +461,20 @@ void initalRules(Slither &now) {
     if (board[1][m] == '1') setStatus(now, 1, m, OUTER);
     if (board[n][1] == '1') setStatus(now, n, 1, OUTER);
     if (board[n][m] == '1') setStatus(now, n, m, OUTER);
+
+    //  .   +---+
+    //    1 |
+    //  .   +   .
+    //    1  
+    //  .   .   .
+    if (board[1][1] == '1' && board[2][1] == '1') setStatus(now, 2, 1, OUTER), setStatus(now, 1, 2, INNER);
+    if (board[1][1] == '1' && board[1][2] == '1') setStatus(now, 2, 1, INNER), setStatus(now, 1, 2, OUTER);
+    if (board[1][m] == '1' && board[2][m] == '1') setStatus(now, 2, m, OUTER), setStatus(now, 1, m-1, INNER);
+    if (board[1][m] == '1' && board[1][m-1] == '1') setStatus(now, 2, m, INNER), setStatus(now, 1, m-1, OUTER);
+    if (board[n][1] == '1' && board[n-1][1] == '1') setStatus(now, n-1, 1, OUTER), setStatus(now, n, 2, INNER);
+    if (board[n][1] == '1' && board[n][2] == '1') setStatus(now, n-1, 1, INNER), setStatus(now, n, 2, OUTER);
+    if (board[n][m] == '1' && board[n-1][m] == '1') setStatus(now, n-1, m, OUTER), setStatus(now, n, m-1, INNER);
+    if (board[n][m] == '1' && board[n][m-1] == '1') setStatus(now, n-1, m, INNER), setStatus(now, n, m-1, OUTER);
 
     // 如果 0 出现在角落里，则它和周围两格必为 OUTER
     if (board[1][1] == '0') setStatus(now, 1, 1, OUTER), setStatus(now, 1, 2, OUTER),   setStatus(now, 2, 1, OUTER);
