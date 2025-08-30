@@ -146,7 +146,7 @@ int main() {
                 cout << "Error: Invalid character in output!" << endl;
                 return 0;
             }
-        cerr << s << endl;
+        // cerr << s << endl;
     }
 
     // 1) 检查区域是否单连通

@@ -87,13 +87,17 @@ bool checkNumber(const Slither &now) {
 // 检查 INNER 区域是否构成一个连通块
 bool isConnected(Slither now) {
     queue<cord> q;
-    q.push(findFirst(now, INNER));
+    auto [i0, j0] = findFirst(now, INNER);
+    TAR = INNER_BFS;
+    q.push(cord(i0, j0));
     while(!q.empty()) {
         auto [i, j] = q.front();
         q.pop();
-        CUR = INNER_BFS;
         FORADJ4 {
-            if (ADJ == INNER) q.push(ADJCORD);
+            if (ADJ == INNER){
+                ADJ = INNER_BFS;
+                q.push(ADJCORD);
+            }
         }
     }
     FORCELL {
@@ -107,17 +111,18 @@ bool isConnected(Slither now) {
 bool checkHole(Slither &now) {
     queue<cord> q;
     q.push(cord(0, 0));
+    now[0][0] = OUTER_BFS;
     while(!q.empty()) {
         auto [i, j] = q.front();
         q.pop();
-        if (CUR == UNKNOWN) {
-            CUR = UNKNOWN_BFS;
-        } else if(CUR == OUTER) {
-            CUR = OUTER_BFS;
-        }
         FORADJ4 {
-            if (ADJ == UNKNOWN || ADJ == OUTER)
+            if (ADJ == UNKNOWN) {
+                ADJ = UNKNOWN_BFS;
                 q.push(ADJCORD);
+            } else if(ADJ == OUTER) {
+                ADJ = OUTER_BFS;
+                q.push(ADJCORD);
+            }
         }
     }
     FORCELL0 {
@@ -222,7 +227,7 @@ bool applyRules(Slither &now) {
                     }
                 }
             }
-            
+
             // 检查连线是否出现十字交叉
             if (isDiff(now, i, j, i+1, j) && isDiff(now, i, j, i, j+1))
                 if (!assertDiff(now, i, j, i+1, j+1, cg)) return false;
@@ -268,6 +273,26 @@ bool applyRules(Slither &now) {
             }
 
             /*
+                +   +   +  
+                | 3 | 3 | 
+                +   +   +
+            */
+            if (board[i][j] == '3' && board[i][j+1] == '3') {
+                if (CUR != UNKNOWN || now[i][j-1] != UNKNOWN || now[i][j+1] != UNKNOWN || now[i][j+2] != UNKNOWN) {
+                    if (!assertDiff(now, i, j-1, i, j, cg) || !assertSame(now, i, j-1, i, j+1, cg) || !assertDiff(now, i, j-1, i, j+2, cg) ||
+                        !assertDiff(now, i, j, i, j+1, cg) || !assertSame(now, i, j, i, j+2, cg) || !assertDiff(now, i, j+1, i, j+2, cg))
+                        return false;
+                }
+            }
+            if (board[i][j] == '3' && board[i+1][j] == '3') {
+                if (CUR != UNKNOWN || now[i-1][j] != UNKNOWN || now[i+1][j] != UNKNOWN || now[i+2][j] != UNKNOWN) {
+                    if (!assertDiff(now, i-1, j, i, j, cg) || !assertSame(now, i-1, j, i+1, j, cg) || !assertDiff(now, i-1, j, i+2, j, cg) ||
+                        !assertDiff(now, i, j, i+1, j, cg) || !assertSame(now, i, j, i+2, j, cg) || !assertDiff(now, i+1, j, i+2, j, cg))
+                        return false;
+                }
+            }
+
+            /*
                     +---+  
                       3 | 
                 +   .   +
@@ -295,6 +320,21 @@ bool applyRules(Slither &now) {
                     !assertDiff(now, i, j, i, j-1, cg) || 
                     !assertDiff(now, i+1, j+1, i+1, j+2, cg) ||
                     !assertDiff(now, i+1, j+1, i+2, j+1, cg)) {
+                        return false;
+                }
+            }
+
+            /*
+                    .   .  
+                    | 3  
+                . x +---+
+                x 0 x   
+                . x .   .
+            */
+            if (board[i][j] == '3') {
+                for (int k = 0; k < 8; k += 2) {
+                    if (board[ADJ8X(k+1)][ADJ8Y(k+1)] != '0') continue;
+                    if (!assertDiff(now, i, j, ADJ8(k), cg) || !assertDiff(now, i, j, ADJ8(k+2), cg))
                         return false;
                 }
             }
@@ -388,7 +428,7 @@ bool solve(Slither now) {
 
     auto [i, j] = findFirst(now, UNKNOWN);
     if (i == -1) {
-        if (isConnected(now) && checkNumber(now)) {
+        if (checkNumber(now) && isConnected(now)) {
             finalAns = now;
             return true;
         } else {
@@ -403,6 +443,65 @@ bool solve(Slither now) {
     return false;
 }
 
+void print_solution_ascii(const vector<string>& puzzle, const Slither& solved) {
+    int n = (int)puzzle.size();
+    int m = (int)puzzle[0].size();
+    auto is_diff_region = [](Status a, Status b) { return a != b;};
+
+    // 画布大小与对方代码一致：行 2*n+3，列 4*m+5
+    vector<string> buf(2 * n + 3, string(4 * m + 5, ' '));
+
+    // 1) 放数字（空位打印空格）
+    for (int i = 1; i <= n; ++i) {
+        for (int j = 1; j <= m; ++j) {
+            char c = puzzle[i - 1][j - 1];
+            buf[2 * i][4 * j] = (c == '.' ? ' ' : c);
+        }
+    }
+
+    // 2) 画横线：检查行边（i 从 0..n，j 从 1..m）
+    for (int i = 0; i <= n; ++i) {
+        for (int j = 1; j <= m; ++j) {
+            if (is_diff_region(solved[i][j], solved[i + 1][j])) {
+                buf[2 * i + 1][4 * j - 1] = '-';
+                buf[2 * i + 1][4 * j]     = '-';
+                buf[2 * i + 1][4 * j + 1] = '-';
+            }
+        }
+    }
+
+    // 3) 画竖线：检查列边（i 从 1..n，j 从 0..m）
+    for (int i = 1; i <= n; ++i) {
+        for (int j = 0; j <= m; ++j) {
+            if (is_diff_region(solved[i][j], solved[i][j + 1])) {
+                buf[2 * i][4 * j + 2] = '|';
+            }
+        }
+    }
+
+    // 4) 处理交点字符
+    for (int i = 0; i <= n; ++i) {
+        for (int j = 0; j <= m; ++j) {
+            int cnt_h = 0, cnt_v = 0;
+            if (buf[2 * i + 1][4 * j + 1] == '-') ++cnt_h;
+            if (buf[2 * i + 1][4 * j + 3] == '-') ++cnt_h;
+            if (buf[2 * i][4 * j + 2] == '|')     ++cnt_v;
+            if (buf[2 * i + 2][4 * j + 2] == '|') ++cnt_v;
+
+            char &ch = buf[2 * i + 1][4 * j + 2];
+            if (cnt_h == 2) ch = '-';
+            else if (cnt_v == 2) ch = '|';
+            else if (cnt_h == 1 && cnt_v == 1) ch = '+';
+            else ch = '.';
+        }
+    }
+
+    // 5) 输出
+    for (int i = 0; i < (int)buf.size(); ++i) {
+        cout << buf[i] << '\n';
+    }
+}
+
 vector<string> Slitherlink(vector<string> _board){
     addBoundary(_board);
     auto slither = newSlither();
@@ -412,6 +511,9 @@ vector<string> Slitherlink(vector<string> _board){
         FORCELL{
             ans[i-1][j-1] = (finalAns[i][j] == INNER) ? '*' : '.';
         }
+        #ifdef LOCAL
+        print_solution_ascii(_board, finalAns);
+        #endif
         return ans;
     } else {
         cerr << "Slitherlink: no solution." << endl;
