@@ -535,17 +535,11 @@ static bool solve(Slither now) {
         }
     }
 
-    if (rand() & 1) {
-        now[ID(i,j)] = INNER;
-        if (solve(now)) return true;
-        now[ID(i,j)] = OUTER;
-        if (solve(now)) return true;
-    } else {
-        now[ID(i,j)] = OUTER;
-        if (solve(now)) return true;
-        now[ID(i,j)] = INNER;
-        if (solve(now)) return true;
-    }
+    auto nxt = (rand() & 1) ? INNER : OUTER;
+    now[ID(i,j)] = nxt;
+    if (solve(now)) return true;
+    now[ID(i,j)] = diff(nxt);
+    if (solve(now)) return true;
     return false;
 }
 
