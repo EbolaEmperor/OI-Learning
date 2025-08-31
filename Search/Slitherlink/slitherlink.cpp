@@ -41,6 +41,8 @@ typedef vector<Status> Slither;
 
 vector<string> board;
 Slither finalAns;
+// A good random seed is all you need.
+mt19937 rnd(101);
 
 // ===== 工具函数 =====
 static inline Slither newSlither() {
@@ -574,7 +576,7 @@ static bool solve(Slither now) {
         }
     }
 
-    auto nxt = (rand() & 1) ? INNER : OUTER;
+    auto nxt = (rnd() & 1) ? INNER : OUTER;
     now[ID(i,j)] = nxt;
     if (solve(now)) return true;
     now[ID(i,j)] = diff(nxt);
@@ -638,8 +640,6 @@ static void print_solution_ascii(const vector<string>& puzzle, const Slither& so
 
 // === 入口 ===
 vector<string> Slitherlink(vector<string> _board){
-    // A good random seed is all you need.
-    srand(109);
     addBoundary(_board);
     auto slither = newSlither();
     initalRules(slither);
