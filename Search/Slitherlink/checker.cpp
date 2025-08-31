@@ -123,11 +123,6 @@ int main() {
     int n = grid.size();
     int m = grid[0].size();
 
-    // 读取题目给定的地图（若评测输入已读完，这段可保留/删除均可）
-    for (int i = 0; i < n; ++i) {
-        cin >> grid[i];
-    }
-
     // 读取用户提交的答案（由你的求解函数返回）
     auto result = Slitherlink(grid);
 
