@@ -42,7 +42,7 @@ typedef vector<Status> Slither;
 vector<string> board;
 Slither finalAns;
 // A good random seed is all you need.
-mt19937 rnd(101);
+mt19937 rnd(517);
 
 // ===== 工具函数 =====
 static inline Slither newSlither() {
@@ -118,7 +118,7 @@ static inline bool isConnected(const Slither& now) {
         for (int k = 0; k < 4; ++k) {
             int ni = i + adj4[k][0], nj = j + adj4[k][1];
             if (ni >= 1 && ni <= n && nj >= 1 && nj <= m) {
-                if (!vis[lid(ni, nj)] && now[ID(ni, nj)] == INNER) {
+                if (!vis[lid(ni, nj)] && (now[ID(ni, nj)] == INNER || now[ID(ni, nj)] == UNKNOWN)) {
                     vis[lid(ni, nj)] = 1;
                     q.emplace_back(ni, nj);
                 }
@@ -565,10 +565,11 @@ static inline void initalRules(Slither &now) {
 static bool solve(Slither now) {
     if (!applyRules(now)) return false;
     if (!checkHole(now)) return false;
+    if (!isConnected(now)) return false;
 
     auto [i, j] = findFirst(now, UNKNOWN);
     if (i == -1) {
-        if (checkNumber(now) && isConnected(now)) {
+        if (checkNumber(now)) {
             finalAns = std::move(now);
             return true;
         } else {
