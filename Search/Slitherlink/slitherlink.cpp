@@ -314,6 +314,15 @@ static inline bool applyRules(Slither &now) {
                     if (board[ADJ8X(k+2)][ADJ8Y(k+2)] == '1' && isSame(now, ADJ8(k), ADJ8(k+1))) {
                         if (!assertSame(now, i, j, ADJ8(k+2), cg)) return false;
                     }
+
+                    //         +     +     +     +     +                    +     +     +     +     +  
+                    //                  1     1                                      1  x  1           
+                    //         +     +     +     +     +         =>         +     +     +     +     +  
+                    //                        0                                            0           
+                    //         +     +     +     +     +                    +     +     +     +     +
+                    if (board[ADJ8X(k)][ADJ8Y(k)] == '1' && (board[ADJ8X(k+1)][ADJ8Y(k+1)] == '0' || board[ADJ8X(k+7)][ADJ8Y(k+7)] == '0')) {
+                        if (!assertSame(now, i, j, ADJ8(k), cg)) return false;
+                    }
                 }
             }
 
@@ -339,21 +348,15 @@ static inline bool applyRules(Slither &now) {
             }
 
             //         +     +  -  +     +     +     +                    +     +  -  +     +     +     +  
-            //                        3                        =>               x        3                 
+            //                        3                        =>               x     x  3                 
             //         +     +  -  +     +     +     +                    +     +  -  +     +     +     + 
             if (c == '3') {
-                if (isDiff(now, i, j-1, i-1, j-1) && isDiff(now, i, j-1, i+1, j-1)) {
-                    if (!assertSame(now, i, j-1, i, j-2, cg)) return false;
-                }
-                if (isDiff(now, i, j+1, i-1, j+1) && isDiff(now, i, j+1, i+1, j+1)) {
-                    if (!assertSame(now, i, j+1, i, j+2, cg)) return false;
-                }
-                if (isDiff(now, i-1, j, i-1, j-1) && isDiff(now, i-1, j, i-1, j+1)) {
-                    if (!assertSame(now, i-1, j, i-2, j, cg)) return false;
-                }
-                if (isDiff(now, i+1, j, i+1, j-1) && isDiff(now, i+1, j, i+1, j+1)) {
-                    if (!assertSame(now, i+1, j, i+2, j, cg)) return false;
-                }
+                for (int k = 0; k < 8; k += 2) 
+                    if (isDiff(now, ADJ8(k), ADJ8(k+1)) && isDiff(now, ADJ8(k), ADJ8(k+7))) {
+                        if (!assertSame(now, i, j, ADJ8(k), cg) || 
+                            !assertSame(now, ADJ8(k), i + 2*adj8[k][0], j + 2*adj8[k][1], cg))
+                            return false;
+                    }
             }
 
             /*
@@ -479,6 +482,42 @@ static inline bool applyRules(Slither &now) {
                         return false;
                 }
             }
+
+            //         +     +     +     +     +     +                    +     +     +  -  +     +     +  
+            //                        2                                                  2                 
+            //         +     +  -  +     +  -  +     +                    +     +  -  +     +  -  +     +  
+            //                        2                        =>                        2                 
+            //         +     +     +     +     +     +                    +     +     +  -  +     +     +  
+            if (c == '2' && board[i+1][j] == '2') {
+                if (isDiff(now, i, j-1, i+1, j-1) && isDiff(now, i, j+1, i+1, j+1)) {
+                    if (!assertDiff(now, i, j, i-1, j, cg) || !assertDiff(now, i+1, j, i+2, j, cg))
+                        return false;
+                }
+            }
+            if (c == '2' && board[i][j+1] == '2') {
+                if (isDiff(now, i-1, j, i-1, j+1) && isDiff(now, i+1, j, i+1, j+1)) {
+                    if (!assertDiff(now, i, j, i, j-1, cg) || !assertDiff(now, i, j+1, i, j+2, cg))
+                        return false;
+                }
+            }
+
+            //         +     +     +     +     +     +                    +     +     +  x  +     +     +  
+            //                        1                                                  1  x              
+            //         +     +  x  +     +     +     +                    +     +  x  +     +     +     +  
+            //                        2                                               |  2                 
+            //         +     +     +     +     +     +         =>         +     +     +     +     +     +  
+            //                           |                                                  |              
+            //         +     +     +     +     +     +                    +     +     +     +     +     +  
+            if (c == '2') {
+                for (int k = 0; k < 8; k += 2) {
+                    if (board[ADJ8X(k+6)][ADJ8Y(k+6)] == '1' && isDiff(now, ADJ8(k+1), ADJ8(k+2)) && isSame(now, ADJ8(k+4), ADJ8(k+5))) {
+                        if (!assertDiff(now, i, j, ADJ8(k+4), cg) 
+                         || !assertSame(now, ADJ8(k+6), i + 2*adj8[k+6][0], j + 2*adj8[k+6][1], cg)
+                         || !assertSame(now, ADJ8(k+6), ADJ8(k+7), cg))
+                         return false;
+                    }
+                }
+            }
         }
     }
 
@@ -599,6 +638,8 @@ static void print_solution_ascii(const vector<string>& puzzle, const Slither& so
 
 // === 入口 ===
 vector<string> Slitherlink(vector<string> _board){
+    // A good random seed is all you need.
+    srand(109);
     addBoundary(_board);
     auto slither = newSlither();
     initalRules(slither);
