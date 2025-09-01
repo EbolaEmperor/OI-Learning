@@ -238,7 +238,7 @@ static inline bool applyRules(Slither &now) {
                 FORADJ4 if(!assertSame(now, i, j, ADJX, ADJY, cg))
                     return false;
 
-            if (now[ID(i,j)] != UNKNOWN && c != '.') {
+            if (now[ID(i,j)] != UNKNOWN && c != '.' && c != '0') {
                 // 检查有数字的位置，如果线连满了，就把其余的线设为不连接
                 int cnt = 0, lim = c - '0';
                 FORADJ4 {
