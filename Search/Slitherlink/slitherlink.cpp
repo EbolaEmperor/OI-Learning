@@ -42,7 +42,8 @@ typedef vector<Status> Slither;
 vector<string> board;
 Slither finalAns;
 // A good random seed is all you need.
-mt19937 rnd(517);
+random_device rdd;
+mt19937 rnd(rdd());
 
 // ===== 工具函数 =====
 static inline Slither newSlither() {
