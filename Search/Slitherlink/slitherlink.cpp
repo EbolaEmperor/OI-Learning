@@ -521,6 +521,42 @@ static inline bool applyRules(Slither &now) {
                     }
                 }
             }
+
+            /*
+                        +---+
+                          3 |
+                    .   .   +
+                      2   
+                +   .   .
+                | 3     
+                +---+   .
+            */
+            if (c == '3' && board[i+1][j-1] == '2' && board[i+2][j-2] == '3') {
+                if (!assertDiff(now, i, j, i-1, j, cg) || 
+                    !assertDiff(now, i, j, i, j+1, cg) || 
+                    !assertDiff(now, i+2, j-2, i+2, j-3, cg) ||
+                    !assertDiff(now, i+2, j-2, i+3, j-2, cg)) {
+                        return false;
+                }
+            }
+
+            /*
+                +---+   .   .
+                | 3       
+                +   .   .   .
+                      2  
+                .   .   .   +
+                          3 |
+                .   .   +---+
+            */
+            if (c == '3' && board[i+1][j+1] == '2' && board[i+2][j+2] == '3') {
+                if (!assertDiff(now, i, j, i-1, j, cg) || 
+                    !assertDiff(now, i, j, i, j-1, cg) || 
+                    !assertDiff(now, i+2, j+2, i+2, j+3, cg) ||
+                    !assertDiff(now, i+2, j+2, i+3, j+2, cg)) {
+                        return false;
+                }
+            }
         }
     }
 
@@ -540,7 +576,10 @@ static inline void initalRules(Slither &now) {
     if (board[n][1] == '1') setStatus(now, n, 1, OUTER);
     if (board[n][m] == '1') setStatus(now, n, m, OUTER);
 
-    // 角落的 1 组合
+    //  #############
+    //  +   +   +   #
+    //    1   1(out)# 
+    //  +---+   +   #
     if (board[1][1] == '1' && board[2][1] == '1') setStatus(now, 2, 1, OUTER), setStatus(now, 1, 2, INNER);
     if (board[1][1] == '1' && board[1][2] == '1') setStatus(now, 2, 1, INNER), setStatus(now, 1, 2, OUTER);
     if (board[1][m] == '1' && board[2][m] == '1') setStatus(now, 2, m, OUTER), setStatus(now, 1, m-1, INNER);
@@ -561,6 +600,32 @@ static inline void initalRules(Slither &now) {
     if (board[1][m] == '2') setStatus(now, 1, m-1, INNER), setStatus(now, 2, m, INNER);
     if (board[n][1] == '2') setStatus(now, n-1, 1, INNER), setStatus(now, n, 2, INNER);
     if (board[n][m] == '2') setStatus(now, n-1, m, INNER), setStatus(now, n, m-1, INNER);
+
+    //  ###########
+    //  +---+   + #
+    //  | 3   2   #
+    //  +   +   + #
+    if (board[1][1] == '2' && board[1][2] == '3') setStatus(now, 1, 3, OUTER);
+    if (board[1][1] == '2' && board[2][1] == '3') setStatus(now, 3, 1, OUTER);
+    if (board[1][m] == '2' && board[1][m-1] == '3') setStatus(now, 1, m-2, OUTER);
+    if (board[1][m] == '2' && board[2][m] == '3') setStatus(now, 3, m, OUTER);
+    if (board[n][1] == '2' && board[n][2] == '3') setStatus(now, n, 3, OUTER);
+    if (board[n][1] == '2' && board[n-1][1] == '3') setStatus(now, n-2, 1, OUTER);
+    if (board[n][m] == '2' && board[n-1][m] == '3') setStatus(now, n-2, m, OUTER);
+    if (board[n][m] == '2' && board[n][m-1] == '3') setStatus(now, n, m-2, OUTER);
+
+    //  ###########
+    //  +---+   + #
+    //    3 | 1   #
+    //  +   +   + #
+    if (board[1][1] == '1' && board[1][2] == '3') setStatus(now, 1, 2, INNER);
+    if (board[1][1] == '1' && board[2][1] == '3') setStatus(now, 2, 1, INNER);
+    if (board[1][m] == '1' && board[1][m-1] == '3') setStatus(now, 1, m-1, INNER);
+    if (board[1][m] == '1' && board[2][m] == '3') setStatus(now, 2, m, INNER);
+    if (board[n][1] == '1' && board[n][2] == '3') setStatus(now, n, 2, INNER);
+    if (board[n][1] == '1' && board[n-1][1] == '3') setStatus(now, n-1, 1, INNER);
+    if (board[n][m] == '1' && board[n-1][m] == '3') setStatus(now, n-1, m, INNER);
+    if (board[n][m] == '1' && board[n][m-1] == '3') setStatus(now, n, m-1, INNER);
 }
 
 static bool solve(Slither now) {
