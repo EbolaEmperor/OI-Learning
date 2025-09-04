@@ -1,5 +1,4 @@
-// Slitherlink — Step 1 only (per Liam Appelbe): build the wiggly line via two-color flips
-// This file ONLY does the region/line generation (no clue counting, no uniqueness checking).
+// Slitherlink: build the wiggly line via two-color flips
 // It follows the article’s rules exactly:
 //   Wiggliness rule:
 //     same(O) > diff(O) OR (same(O) == diff(O) AND same(D) > diff(D))
@@ -7,11 +6,7 @@
 //     Let flips be the number of color changes around the 8-neighbour ring (in spatial order).
 //     Let num(O) be the number of in-bounds orthogonal neighbours (2/3/4).
 //     Forbid the flip if: flips > 2 * num(O) - 4
-// Also: run on an (H+2) x (W+2) grid and crop the outer one-cell border at the end.
-// Compile:  g++ -O2 -std=c++17 -o slither_step1 slither_step1.cpp
-// Run:      ./slither_step1 [H W] [seed]
-// Output:   Prints HxW grid of '.' and '#' (two colors). The boundary between them is the wiggly line.
-// Author:   ChatGPT (implements Liam Appelbe’s described approach, step 1 only)
+// url: https://liamappelbe.medium.com/how-to-generate-slither-link-puzzles-6c65510b2ba1
 
 #include <bits/stdc++.h>
 using namespace std;
@@ -192,12 +187,11 @@ vector<vector<uint8_t>> generate_regions_step1(int H, int W)
     vector<vector<uint8_t>> g(R, vector<uint8_t>(C, 0));
 
     // Initial colouring: top half 0, bottom half 1
-    for (int r = 0; r < R; r++)
-    {
-        uint8_t col = (r < R / 2) ? 0 : 1;
-        for (int c = 0; c < C; c++)
-            g[r][c] = col;
-    }
+    uint8_t lenH = ceil(H / sqrt(3)), stH = (H - lenH) / 2;
+    uint8_t lenW = ceil(W / sqrt(3)), stW = (W - lenW) / 2;
+    for (int r = stH; r < stH + lenH; r++)
+        for (int c = stW; c < stW + lenW; c++)
+            g[r][c] = 1;
 
     // Frontier
     vector<Pt> cand;
@@ -289,15 +283,60 @@ static bool is_connected_4(const vector<vector<uint8_t>> &a)
     return seen == tot1;
 }
 
+int adj4[][2] = { {-1, 0}, {1, 0}, {0, -1}, {0, 1} };
+
+static inline vector<string> addBoundary(const vector<string> &_board) {
+    int n = (int)_board.size();
+    int m = (int)_board[0].size();
+    vector<string> board;
+    board.reserve(n + 2);
+
+    string border(m + 2, '.');
+    board.push_back(border);
+    for (int i = 0; i < n; ++i) {
+        string row; row.reserve(m + 2);
+        row.push_back('.');
+        row += _board[i];
+        row.push_back('.');
+        board.push_back(std::move(row));
+    }
+    board.push_back(border);
+    return board;
+}
+
+void genPuzzle(vector<string> grid, double rate) {
+    int n = grid.size(), m = grid[0].size();
+    grid = addBoundary(grid);
+    for (int i = 1; i <= n; i++) {
+        for(int j = 1; j <= m; j++) {
+            if (rng() < rate * rng.max()) {
+                int cnt = 0;
+                for (int k = 0; k < 4; k++) {
+                    int ni = i + adj4[k][0], nj = j + adj4[k][1];
+                    if (grid[i][j] != grid[ni][nj]) ++cnt;
+                }
+                cout << cnt;
+            } else {
+                cout << '.';
+            }
+        }
+        cout << '\n';
+    }
+}
+
 int main(int argc, char **argv)
 {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
-    int H = 20, W = 30;
+    int H = 16, W = 16;
     if (argc >= 3)
     {
         H = atoi(argv[1]);
         W = atoi(argv[2]);
+    }
+    double rate = 0.5;
+    if (argc >= 4) {
+        rate = atof(argv[3]);
     }
 
     auto g = generate_regions_step1(H, W);
@@ -305,17 +344,15 @@ int main(int argc, char **argv)
         g = generate_regions_step1(H, W);
     }
 
-    // Sanity check (not part of the algorithm, just for your debugging):
-    // If disconnected, print a warning so you can rerun with a different seed.
-    if (!is_connected_4(g))
-        cerr << "[warn] color # region not 4-connected (unexpected).\n";
-
-    // Render
+    vector<string> gg;
     for (int r = 0; r < H; r++)
     {
+        string line;
         for (int c = 0; c < W; c++)
-            cout << (g[r][c] ? '*' : '.');
-        cout << '\n';
+            line += (g[r][c] ? '*' : '.');
+        gg.push_back(line);
     }
+    genPuzzle(gg, rate);
+
     return 0;
 }

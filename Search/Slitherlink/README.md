@@ -17,20 +17,18 @@
 当你创建好字符画文件后，用下面的命令生成谜题：
 
 ```bash
-./genPuzzle < [input] > [output]
+./genAlpha < [input] > [output]
 ```
 
-### 生成器用法：生成随机字符画
+### 生成器用法：生成随机数回谜题
 
-本项目提供一个符合 `genPuzzle` 要求的随机字符画生成器，使用方法：
+本项目提供一个随机 puzzle 生成器，使用方法：
 
 ```bash
-./genSplit [H] [W] > [output]
+./genBeta [H] [W] [rate] > [output]
 ```
 
-其中 `H` 表示 puzzle 的高度，`W` 表示宽度。生成好之后获得一个文件 `[output]`，你需要在这个文件的前面加一行，写一个 $0$ 到 $1$ 之间的实数表示数字保留比例，然后调用 `genPuzzle` 来生成最终的 puzzle。
-
-注意：`genPuzzle.cpp` 由 ChatGPT 自动生成，不保证无 bug。
+其中 `H` 表示 puzzle 的高度，`W` 表示宽度，`rate` 表示数字保留比例（默认为 $0.5$）。
 
 ### 读取器用法
 
