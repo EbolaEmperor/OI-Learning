@@ -724,3 +724,26 @@ vector<string> Slitherlink(vector<string> _board){
         return vector<string>();
     }
 }
+
+
+int count_sol = 0;
+
+static void countSol(Slither now) {
+    if (!applyRules(now) || !checkHole(now) || !isConnected(now)) return;
+    auto [i, j] = findFirst(now, UNKNOWN);
+    if (i == -1) {
+        count_sol += checkNumber(now);
+        return;
+    }
+    CUR = INNER; countSol(now);
+    CUR = OUTER; countSol(now);
+}
+
+int countSol(vector<string> _board) {
+    addBoundary(_board);
+    auto slither = newSlither();
+    initalRules(slither);
+    count_sol = 0;
+    countSol(slither);
+    return count_sol;
+}

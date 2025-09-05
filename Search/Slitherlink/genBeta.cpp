@@ -177,8 +177,8 @@ static bool try_flip_keep_if_good(vector<vector<uint8_t>> &g, int r, int c, int 
     return ok;
 }
 
-random_device rdd;
-mt19937 rng(rdd());
+random_device rddd;
+mt19937 rng(rddd());
 
 // The step-1 generator (two-colour flip process) with strict invariants
 vector<vector<uint8_t>> generate_regions_step1(int H, int W)
@@ -191,6 +191,9 @@ vector<vector<uint8_t>> generate_regions_step1(int H, int W)
     uint8_t lenW = ceil(W / sqrt(3)), stW = (W - lenW) / 2;
     for (int r = stH; r < stH + lenH; r++)
         for (int c = stW; c < stW + lenW; c++)
+            g[r][c] = 1;
+    for (int r = 0; r < stH + 2; r++)
+        for (int c = 0; c < stW + 2; c++)
             g[r][c] = 1;
 
     // Frontier
@@ -283,46 +286,46 @@ static bool is_connected_4(const vector<vector<uint8_t>> &a)
     return seen == tot1;
 }
 
-int adj4[][2] = { {-1, 0}, {1, 0}, {0, -1}, {0, 1} };
+int countSol(vector<string> _board);
 
-static inline vector<string> addBoundary(const vector<string> &_board) {
-    int n = (int)_board.size();
-    int m = (int)_board[0].size();
-    vector<string> board;
-    board.reserve(n + 2);
-
-    string border(m + 2, '.');
-    board.push_back(border);
-    for (int i = 0; i < n; ++i) {
-        string row; row.reserve(m + 2);
-        row.push_back('.');
-        row += _board[i];
-        row.push_back('.');
-        board.push_back(std::move(row));
-    }
-    board.push_back(border);
-    return board;
-}
-
-void genPuzzle(vector<string> grid, double rate) {
+vector<string> genNumber(vector<string> grid) {
+    const int adj4[][2] = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
+    auto numGrid = grid;
     int n = grid.size(), m = grid[0].size();
-    grid = addBoundary(grid);
-    for (int i = 1; i <= n; i++) {
-        for(int j = 1; j <= m; j++) {
-            if (rng() < rate * rng.max()) {
-                int cnt = 0;
-                for (int k = 0; k < 4; k++) {
-                    int ni = i + adj4[k][0], nj = j + adj4[k][1];
-                    if (grid[i][j] != grid[ni][nj]) ++cnt;
-                }
-                cout << cnt;
-            } else {
-                cout << '.';
+    for (int i = 0; i < n; i++) {
+        for(int j = 0; j < m; j++) {
+            int cnt = 0;
+            for (int k = 0; k < 4; k++) {
+                int ni = i + adj4[k][0], nj = j + adj4[k][1];
+                if (ni < 0 || ni >= n || nj < 0 || nj >= m) cnt += (grid[i][j] == '*');
+                else cnt += (grid[i][j] != grid[ni][nj]);
             }
+            numGrid[i][j] = '0' + cnt;
         }
-        cout << '\n';
     }
+
+    // 在确保解唯一性的前提下删除至少一半的数字
+    int del_cnt = 0, stop = 0;
+    while (del_cnt < 0.5 * n * m) {
+        int i, j;
+        do {
+            i = rng() % n, j = rng() % m;
+        } while(numGrid[i][j] == '.');
+        auto x = numGrid[i][j];
+        numGrid[i][j] = '.';
+        if (countSol(numGrid) == 1) {
+            ++del_cnt;
+            stop = 0;
+        } else {
+            numGrid[i][j] = x;
+            // 如果超过 20 次删除无效，直接退出
+            if (++stop > 20) break;
+        }
+    }
+
+    return numGrid;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -333,10 +336,6 @@ int main(int argc, char **argv)
     {
         H = atoi(argv[1]);
         W = atoi(argv[2]);
-    }
-    double rate = 0.5;
-    if (argc >= 4) {
-        rate = atof(argv[3]);
     }
 
     auto g = generate_regions_step1(H, W);
@@ -352,7 +351,10 @@ int main(int argc, char **argv)
             line += (g[r][c] ? '*' : '.');
         gg.push_back(line);
     }
-    genPuzzle(gg, rate);
+    
+    auto numGrid = genNumber(gg);
+    for (auto &s : numGrid)
+        cout << s << "\n";
 
     return 0;
 }
