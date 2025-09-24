@@ -1,40 +1,45 @@
 #include <bits/stdc++.h>
+#define lowbit(x) ((x)&(-x))
 using namespace std;
 
-int n, col, diag, codiag;
-vector<int> board;
-int cnt = 0;
+unsigned n, maxx;
+unsigned col, diag, codiag;
+// bool col[30], diag[30], codiag[30];
+vector<unsigned> board;
+unsigned cnt = 0;
 
-void solve(int row) {
+void solve(unsigned row) {
     if (row == n) {
         cnt++;
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (board[i] == j) cout << "Q ";
-                else cout << ". ";
-            }
-            cout << "\n";
-        }
-        cout << "\n";
+        // for (unsigned i = 0; i < n; ++i) {
+        //     for (unsigned j = 0; j < n; ++j) {
+        //         if (board[i] & (1 << j)) cout << "Q ";
+        //         else cout << ". ";
+        //     }
+        //     cout << "\n";
+        // }
+        // cout << "\n";
         return;
     }
-    for (int j = 0; j < n; ++j) {
-        if ((col & (1 << j)) || 
-            (diag & (1 << (row + j))) || 
-            (codiag & (1 << (row - j + n - 1)))) continue;
-        board[row] = j;
-        col |= (1 << j);
-        diag |= (1 << (row + j));
-        codiag |= (1 << (row - j + n - 1));
+    unsigned tmp = (col | (diag >> row) | (codiag >> (n - row - 1))) & maxx;
+    tmp = maxx ^ tmp;
+    while(tmp) {
+        unsigned j = lowbit(tmp);
+        // board[row] = j;
+        col |= j;
+        diag |= j << row;
+        codiag |= j << (n - row - 1);
         solve(row + 1);
-        col ^= (1 << j);
-        diag ^= (1 << (row + j));
-        codiag ^= (1 << (row - j + n - 1));
+        col ^= j;
+        diag ^= j << row;
+        codiag ^= j << (n - row - 1);
+        tmp ^= j;
     }
 }
 
 int main() {
     cin >> n;
+    maxx = (1 << n) - 1;
     col = diag = codiag = 0;
     board.resize(n);
     solve(0);
