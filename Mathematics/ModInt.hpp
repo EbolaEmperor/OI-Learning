@@ -22,8 +22,12 @@ public:
         if (x < 0) x += mod;
     }
     
-    // 获取值
+    // 强制类型转换
     int get() const { return x; }
+    operator int() const { return x; }
+    operator unsigned() const { return (unsigned) x; }
+    operator long long() const { return (long long) x; }
+    operator unsigned long long() const { return (unsigned long long) x; }
     
     // 加法
     ModInt operator+(const ModInt& other) const {
