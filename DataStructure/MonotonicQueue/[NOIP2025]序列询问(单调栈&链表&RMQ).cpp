@@ -59,7 +59,6 @@ void solve() {
 
         deque<Q1Element> q1;
         list<Segment> q2;
-        deque<list<Segment>::iterator> q2_max;
 
         // Pre-fill Q2 with [L, R-1] if applicable
         if (L < R) {
@@ -69,16 +68,13 @@ void solve() {
             seg.w = 0;
             seg.max_sum = query_st(L, R - 1);
             q2.push_back(seg);
-            q2_max.push_back(q2.begin());
         }
 
         unsigned long long final_ans = 0;
 
         for (int i = 1; i <= n; i++) {
             // 1. Remove invalid from Q1 (r < i)
-            while (!q1.empty() && q1.front().r < i) {
-                q1.pop_front();
-            }
+            while (!q1.empty() && q1.front().r < i) q1.pop_front();
 
             // 2. Move from Q2 to Q1
             // Valid r for Q1: r < i + L - 1.
@@ -99,25 +95,17 @@ void solve() {
 
                     // Update Segment
                     it->r_start++;
-                    if (it->r_start > it->r_end) {
-                        // Remove segment
-                        if (!q2_max.empty() && q2_max.front() == it) {
-                            q2_max.pop_front();
-                        }
-                        q2.pop_front();
-                    } else {
-                        // Update values
-                        it->max_sum = query_st(it->r_start, it->r_end);
-                        // Check Q2_Max
-                        if (!q2_max.empty() && q2_max.front() == it) {
-                            long long cur_val = it->val();
-                            if (q2_max.size() > 1) {
-                                auto next_it = q2_max[1];
-                                if (cur_val < next_it->val()) {
-                                    q2_max.pop_front();
-                                }
-                            }
-                            // If size == 1, it stays max even if decreased
+                    if (it->r_start > it->r_end) q2.pop_front();
+                    else it->max_sum = query_st(it->r_start, it->r_end);
+
+                    // Maintain Q2 Monotonicity after front update
+                    // If the front element becomes smaller than the second, it's useless forever.
+                    if (!q2.empty()) {
+                        auto first = q2.begin();
+                        if (q2.size() > 1) {
+                            auto second = next(first);
+                            if (first->val() <= second->val())
+                                q2.pop_front();
                         }
                     }
                 }
@@ -141,10 +129,6 @@ void solve() {
                     start_r = back_it->r_start;
                     end_r = max(end_r, back_it->r_end);
                 }
-
-                if (!q2_max.empty() && q2_max.back() == back_it) {
-                    q2_max.pop_back();
-                }
                 q2.pop_back();
             }
 
@@ -155,19 +139,12 @@ void solve() {
                 new_seg.w = w_new;
                 new_seg.max_sum = query_st(start_r, end_r);
 
-                q2.push_back(new_seg);
-                auto new_it = prev(q2.end());
-
-                // Maintain Q2_Max
-                while (!q2_max.empty()) {
-                    auto back_it = q2_max.back();
-                    if (back_it->val() <= new_it->val()) {
-                        q2_max.pop_back();
-                    } else {
-                        break;
-                    }
+                // Maintain Q2 Monotonicity (Pop back if smaller than new)
+                while (!q2.empty()) {
+                    if (q2.back().val() <= new_seg.val()) q2.pop_back();
+                    else break;
                 }
-                q2_max.push_back(new_it);
+                q2.push_back(new_seg);
             }
 
             // 4. Query
@@ -177,8 +154,8 @@ void solve() {
                 max_val = max(max_val, q1.front().val);
                 found = true;
             }
-            if (!q2_max.empty()) {
-                max_val = max(max_val, q2_max.front()->val());
+            if (!q2.empty()) {
+                max_val = max(max_val, q2.front().val());
                 found = true;
             }
 
@@ -197,4 +174,3 @@ int main() {
     solve();
     return 0;
 }
-
