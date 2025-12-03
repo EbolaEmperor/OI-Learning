@@ -22,7 +22,7 @@ int main() {
 
     sort(x.begin(), x.end());
     long long singleCost = 0, ans = m / s_min * 2;
-    for (long long k = 0; k <= n; ++k) {
+    for (long long k = 0; k < n; ++k) {
         singleCost += x[k];
         if (singleCost > m) break;
         long long rem = m - singleCost;
