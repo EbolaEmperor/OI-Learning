@@ -1,3 +1,4 @@
+// 期望 O(n) 版本，大约有 36 的常数
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -76,7 +77,10 @@ int main(){
         p[i].x += 1e7;
         p[i].y += 1e7;
     }
-    random_shuffle(p, p + n);
+
+    random_device rd;
+    mt19937_64 rnd(rd());
+    std::shuffle(p, p + n, rnd);
 
     long long ans = nearest_dist(p, n);
     cout << ans << endl;
