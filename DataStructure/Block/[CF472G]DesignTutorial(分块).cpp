@@ -14,15 +14,6 @@ void write(ULL x)
 	putchar((x&1)+'0');
 }
  
-int count(ULL x)
-{
-	int ans=cnt[x&base];
-	x>>=16;ans+=cnt[x&base];
-	x>>=16;ans+=cnt[x&base];
-	x>>=16;ans+=cnt[x];
-	return ans;
-}
- 
 int main()
 {
 	scanf("%s%s",s1+1,s2+1);
@@ -41,12 +32,12 @@ int main()
 		x1++;x2++;
 		while(len>=64)
 		{
-			ans+=count(p1[x1]^p2[x2]);
+			ans += __builtin_popcountll(p1[x1]^p2[x2]);
 			x1+=64;x2+=64;len-=64;
 		}
 		while(len>0)
 		{
-			ans+=(s1[x1]-'0')^(s2[x2]-'0');
+			ans += (s1[x1]-'0')^(s2[x2]-'0');
 			x1++;x2++;len--;
 		}
 		printf("%d\n",ans);

@@ -74,7 +74,7 @@ void access(int x)
 	}
 }
 void makeroot(int x){access(x);splay(x);pushr(x);}
-int find(int x)
+int find(int x) // 寻找 x 所在的树根
 {
 	access(x);splay(x);
 	while(ls) pushdown(x),x=ls;
@@ -83,7 +83,7 @@ int find(int x)
 void cut(int x,int y)
 {
 	makeroot(x);
-	if(find(y)==x&&nd[x].fa==y&&!rs)
+	if(find(y)==x && nd[x].fa==y && nd[y].son[0]==x && !rs)
 		nd[y].son[0]=nd[x].fa=0;
 }
 void link(int x,int y){makeroot(x);if(find(y)!=x) nd[x].fa=y;}
@@ -96,6 +96,7 @@ int main()
 	while(m--)
 	{
 		opt=read();x=read();y=read();
+		// split 完之后，x 到 y 的路径在以 y 为根的 splay 树中，且不含其它节点
 		if(opt==0) split(x,y),printf("%d\n",nd[y].sum);
 		if(opt==1) link(x,y);
 		if(opt==2) cut(x,y);
