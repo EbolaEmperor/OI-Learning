@@ -1,5 +1,13 @@
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 using namespace std;
+
+static constexpr int kBranchMoreDepth = 4;
 
 // ===== 全局尺寸（供 ID 宏使用） =====
 int n, m;
@@ -40,10 +48,12 @@ typedef pair<int,int> cord;
 typedef vector<Status> Slither;
 
 vector<string> board;
+vector<cord> numberedCells;
+vector<cord> vertexCells;
 Slither finalAns;
-// A good random seed is all you need.
-random_device rdd;
-mt19937 rnd(rdd());
+vector<size_t> bfsQueue;
+vector<uint32_t> connectedMark;
+uint32_t connectedStamp = 0;
 
 // ===== 工具函数 =====
 static inline Slither newSlither() {
@@ -76,6 +86,18 @@ static inline void addBoundary(const vector<string> &_board) {
         board.push_back(std::move(row));
     }
     board.push_back(border);
+
+    numberedCells.clear();
+    numberedCells.reserve((size_t)n * m);
+    FORCELL {
+        if (board[i][j] != '.') numberedCells.emplace_back(i, j);
+    }
+
+    vertexCells.clear();
+    vertexCells.reserve((size_t)(n + 1) * (m + 1));
+    for (int i = 0; i <= n; ++i)
+        for (int j = 0; j <= m; ++j)
+            vertexCells.emplace_back(i, j);
 }
 
 // 寻找 now 里面第一个为 sta 的状态
@@ -89,9 +111,8 @@ static inline cord findFirst(const Slither &now, Status sta) {
 
 // 检查数字周围是否有正确数量的线
 static inline bool checkNumber(const Slither &now) {
-    FORCELL {
+    for (auto [i, j] : numberedCells) {
         char c = board[i][j];
-        if (c == '.') continue;
         int cnt = 0, lim = c - '0';
         FORADJ4 {
             if (now[ID(i,j)] != now[ID(ADJX,ADJY)]) ++cnt;
@@ -106,57 +127,102 @@ static inline bool isConnected(const Slither& now) {
     auto [i0, j0] = findFirst(now, INNER);
     if (i0 == -1) return true; // 没 INNER 视作连通
 
-    const int H = n + 2, W = m + 2;
-    auto lid = [&](int x, int y){ return (size_t)x * W + y; };
-    vector<uint8_t> vis((size_t)H * W, 0);
+    const size_t W = (size_t)m + 2;
+    const size_t total = ((size_t)n + 2) * W;
+    if (connectedMark.size() < total) connectedMark.assign(total, 0);
+    if (++connectedStamp == 0) {
+        fill(connectedMark.begin(), connectedMark.end(), 0);
+        connectedStamp = 1;
+    }
+    if (bfsQueue.capacity() < total) bfsQueue.reserve(total);
 
-    deque<cord> q;
-    q.emplace_back(i0, j0);
-    vis[lid(i0, j0)] = 1;
+    bfsQueue.clear();
+    size_t head = 0;
+    size_t start = ID(i0, j0);
+    bfsQueue.push_back(start);
+    connectedMark[start] = connectedStamp;
 
-    while (!q.empty()) {
-        auto [i, j] = q.front(); q.pop_front();
-        for (int k = 0; k < 4; ++k) {
-            int ni = i + adj4[k][0], nj = j + adj4[k][1];
-            if (ni >= 1 && ni <= n && nj >= 1 && nj <= m) {
-                if (!vis[lid(ni, nj)] && (now[ID(ni, nj)] == INNER || now[ID(ni, nj)] == UNKNOWN)) {
-                    vis[lid(ni, nj)] = 1;
-                    q.emplace_back(ni, nj);
-                }
+    while (head < bfsQueue.size()) {
+        size_t id = bfsQueue[head++];
+        int i = (int)(id / W), j = (int)(id % W);
+
+        if (j < m) {
+            size_t nxt = id + 1;
+            if (connectedMark[nxt] != connectedStamp && (now[nxt] == INNER || now[nxt] == UNKNOWN)) {
+                connectedMark[nxt] = connectedStamp;
+                bfsQueue.push_back(nxt);
+            }
+        }
+        if (i < n) {
+            size_t nxt = id + W;
+            if (connectedMark[nxt] != connectedStamp && (now[nxt] == INNER || now[nxt] == UNKNOWN)) {
+                connectedMark[nxt] = connectedStamp;
+                bfsQueue.push_back(nxt);
+            }
+        }
+        if (j > 1) {
+            size_t nxt = id - 1;
+            if (connectedMark[nxt] != connectedStamp && (now[nxt] == INNER || now[nxt] == UNKNOWN)) {
+                connectedMark[nxt] = connectedStamp;
+                bfsQueue.push_back(nxt);
+            }
+        }
+        if (i > 1) {
+            size_t nxt = id - W;
+            if (connectedMark[nxt] != connectedStamp && (now[nxt] == INNER || now[nxt] == UNKNOWN)) {
+                connectedMark[nxt] = connectedStamp;
+                bfsQueue.push_back(nxt);
             }
         }
     }
 
     FORCELL {
-        if (now[ID(i,j)] == INNER && !vis[lid(i, j)]) return false;
+        size_t id = ID(i, j);
+        if (now[id] == INNER && connectedMark[id] != connectedStamp) return false;
     }
     return true;
 }
 
 // 检查是否有 OUTER 被 INNER 包起来形成一个洞
 // 如果有 UNKNOWN 被 INNER 包起来，那就把它设为 INNER
-static inline bool checkHole(Slither &now) {
-    queue<cord> q;
-    q.emplace(0, 0);
-    now[ID(0,0)] = OUTER_BFS;
-    while(!q.empty()) {
-        auto [i, j] = q.front();
-        q.pop();
-        FORADJ4 {
-            Status &adj = now[ID(ADJX,ADJY)];
+static inline bool checkHole(Slither &now, bool *changed = nullptr) {
+    if (changed) *changed = false;
+    const size_t W = (size_t)m + 2;
+    const size_t total = ((size_t)n + 2) * W;
+    if (bfsQueue.capacity() < total) bfsQueue.reserve(total);
+    bfsQueue.clear();
+    size_t head = 0;
+    bfsQueue.push_back(0);
+    now[0] = OUTER_BFS;
+
+    while(head < bfsQueue.size()) {
+        size_t id = bfsQueue[head++];
+        int i = (int)(id / W), j = (int)(id % W);
+
+        auto pushReachable = [&](size_t nxt) {
+            Status &adj = now[nxt];
             if (adj == UNKNOWN) {
                 adj = UNKNOWN_BFS;
-                q.emplace(ADJX, ADJY);
-            } else if(adj == OUTER) {
+                bfsQueue.push_back(nxt);
+            } else if (adj == OUTER) {
                 adj = OUTER_BFS;
-                q.emplace(ADJX, ADJY);
+                bfsQueue.push_back(nxt);
             }
-        }
+        };
+
+        if (j < m + 1) pushReachable(id + 1);
+        if (i < n + 1) pushReachable(id + W);
+        if (j > 0) pushReachable(id - 1);
+        if (i > 0) pushReachable(id - W);
     }
-    FORCELL0 {
-        Status &cur = now[ID(i,j)];
+
+    for (size_t id = 0; id < total; ++id) {
+        Status &cur = now[id];
         if (cur == OUTER) return false;
-        else if (cur == UNKNOWN) cur = INNER;
+        else if (cur == UNKNOWN) {
+            cur = INNER;
+            if (changed) *changed = true;
+        }
         else if (cur == UNKNOWN_BFS) cur = UNKNOWN;
         else if (cur == OUTER_BFS) cur = OUTER;
     }
@@ -171,6 +237,16 @@ static inline bool setStatus(Slither &now, int i, int j, Status sta) {
     } else {
         return cur == sta;
     }
+}
+
+static inline bool forceStatus(Slither &now, int i, int j, Status sta, bool &cg) {
+    Status &cur = now[ID(i,j)];
+    if (cur == UNKNOWN) {
+        cur = sta;
+        cg = true;
+        return true;
+    }
+    return cur == sta;
 }
 
 static inline Status diff(Status sta) {
@@ -225,11 +301,123 @@ static inline bool isDiff(const Slither &now, int i, int j, int i0, int j0) {
     return a != UNKNOWN && b != UNKNOWN && a != b;
 }
 
+static inline int statusMask(Status sta) {
+    return sta == INNER ? 1 : 2;
+}
+
+static inline Status maskStatus(int mask) {
+    return mask == 1 ? INNER : OUTER;
+}
+
+static inline bool applyNumberConstraint(Slither &now, int i, int j, bool &cg) {
+    array<size_t, 5> ids = {
+        ID(i, j),
+        ID(i, j + 1),
+        ID(i + 1, j),
+        ID(i, j - 1),
+        ID(i - 1, j)
+    };
+    int possible[5] = {0, 0, 0, 0, 0};
+    const int lim = board[i][j] - '0';
+    bool any = false;
+
+    for (int mask = 0; mask < 32; ++mask) {
+        Status val[5];
+        bool ok = true;
+        for (int p = 0; p < 5; ++p) {
+            val[p] = (mask & (1 << p)) ? INNER : OUTER;
+            Status cur = now[ids[p]];
+            if (cur != UNKNOWN && cur != val[p]) {
+                ok = false;
+                break;
+            }
+        }
+        if (!ok) continue;
+
+        int cnt = 0;
+        for (int p = 1; p < 5; ++p)
+            cnt += (val[p] != val[0]);
+        if (cnt != lim) continue;
+
+        any = true;
+        for (int p = 0; p < 5; ++p)
+            possible[p] |= statusMask(val[p]);
+    }
+
+    if (!any) return false;
+    for (int p = 0; p < 5; ++p) {
+        if (now[ids[p]] == UNKNOWN && (possible[p] == 1 || possible[p] == 2)) {
+            now[ids[p]] = maskStatus(possible[p]);
+            cg = true;
+        }
+    }
+    return true;
+}
+
+static inline bool applyVertexConstraint(Slither &now, int i, int j, bool &cg) {
+    array<size_t, 4> ids = {
+        ID(i, j),
+        ID(i, j + 1),
+        ID(i + 1, j),
+        ID(i + 1, j + 1)
+    };
+    int possible[4] = {0, 0, 0, 0};
+    bool any = false;
+
+    for (int mask = 0; mask < 16; ++mask) {
+        Status val[4];
+        bool ok = true;
+        for (int p = 0; p < 4; ++p) {
+            val[p] = (mask & (1 << p)) ? INNER : OUTER;
+            Status cur = now[ids[p]];
+            if (cur != UNKNOWN && cur != val[p]) {
+                ok = false;
+                break;
+            }
+        }
+        if (!ok) continue;
+
+        int deg = 0;
+        deg += (val[0] != val[1]);
+        deg += (val[1] != val[3]);
+        deg += (val[2] != val[3]);
+        deg += (val[0] != val[2]);
+        if (deg != 0 && deg != 2) continue;
+
+        any = true;
+        for (int p = 0; p < 4; ++p)
+            possible[p] |= statusMask(val[p]);
+    }
+
+    if (!any) return false;
+    for (int p = 0; p < 4; ++p) {
+        if (now[ids[p]] == UNKNOWN && (possible[p] == 1 || possible[p] == 2)) {
+            now[ids[p]] = maskStatus(possible[p]);
+            cg = true;
+        }
+    }
+    return true;
+}
+
 static inline bool applyRules(Slither &now) {
     bool cg = true;
+    const bool eagerGeneric = n <= 16 && m <= 16;
+    bool runGeneric = eagerGeneric;
     auto [i0, j0] = findFirst(now, UNKNOWN);
     while(cg) {
         cg = false;
+        if (runGeneric || eagerGeneric) {
+            for (auto [i, j] : numberedCells) {
+                if (!applyNumberConstraint(now, i, j, cg)) return false;
+            }
+            for (auto [i, j] : vertexCells) {
+                if (!applyVertexConstraint(now, i, j, cg)) return false;
+            }
+            if (cg && !eagerGeneric) {
+                runGeneric = eagerGeneric;
+                continue;
+            }
+        }
         for (int i = max(1, i0-1); i <= n; i++)
         for (int j = 1; j <= m; j++) {
             char c = board[i][j];
@@ -249,7 +437,7 @@ static inline bool applyRules(Slither &now) {
                 if (cnt == lim) {
                     FORADJ4 {
                         if (now[ID(ADJX,ADJY)] == UNKNOWN)
-                            setStatus(now, ADJX, ADJY, now[ID(i,j)]);
+                            if (!forceStatus(now, ADJX, ADJY, now[ID(i,j)], cg)) return false;
                     }
                 }
 
@@ -262,7 +450,7 @@ static inline bool applyRules(Slither &now) {
                 if (cnt == 4 - lim) {
                     FORADJ4 {
                         if (now[ID(ADJX,ADJY)] == UNKNOWN)
-                            setStatus(now, ADJX, ADJY, diff(now[ID(i,j)]));
+                            if (!forceStatus(now, ADJX, ADJY, diff(now[ID(i,j)]), cg)) return false;
                     }
                 }
             }
@@ -558,6 +746,10 @@ static inline bool applyRules(Slither &now) {
                 }
             }
         }
+        if (!cg && !runGeneric && !eagerGeneric) {
+            runGeneric = true;
+            cg = true;
+        }
     }
 
     return true;
@@ -628,12 +820,81 @@ static inline void initalRules(Slither &now) {
     if (board[n][m] == '1' && board[n][m-1] == '3') setStatus(now, n, m-1, INNER);
 }
 
-static bool solve(Slither now) {
-    if (!applyRules(now)) return false;
-    if (!checkHole(now)) return false;
-    if (!isConnected(now)) return false;
+static inline bool normalize(Slither &now) {
+    while (true) {
+        if (!applyRules(now)) return false;
+        bool holeChanged = false;
+        if (!checkHole(now, &holeChanged)) return false;
+        if (!isConnected(now)) return false;
+        if (!holeChanged) return true;
+    }
+}
 
-    auto [i, j] = findFirst(now, UNKNOWN);
+static inline int countUnknown(const Slither &now) {
+    int ret = 0;
+    FORCELL {
+        ret += now[ID(i,j)] == UNKNOWN;
+    }
+    return ret;
+}
+
+static inline int localConstraintScore(const Slither &now, int i, int j) {
+    int score = 0;
+
+    FORADJ4 {
+        if (now[ID(ADJX, ADJY)] != UNKNOWN) score += 6;
+    }
+
+    const int di[5] = {0, 0, 1, 0, -1};
+    const int dj[5] = {0, 1, 0, -1, 0};
+    for (int t = 0; t < 5; ++t) {
+        int x = i + di[t], y = j + dj[t];
+        if (!INBOARD(x, y) || board[x][y] == '.') continue;
+        int unk = 0;
+        if (now[ID(x, y)] == UNKNOWN) ++unk;
+        for (int k = 0; k < 4; ++k)
+            unk += now[ID(x + adj4[k][0], y + adj4[k][1])] == UNKNOWN;
+        score += 80 - 10 * unk;
+    }
+
+    for (int x = i - 1; x <= i; ++x) {
+        for (int y = j - 1; y <= j; ++y) {
+            if (x < 0 || x > n || y < 0 || y > m) continue;
+            int unk = 0;
+            unk += now[ID(x, y)] == UNKNOWN;
+            unk += now[ID(x, y + 1)] == UNKNOWN;
+            unk += now[ID(x + 1, y)] == UNKNOWN;
+            unk += now[ID(x + 1, y + 1)] == UNKNOWN;
+            score += 24 - 4 * unk;
+        }
+    }
+
+    return score;
+}
+
+static inline cord chooseBranchCell(const Slither &now) {
+    int bestScore = -1;
+    cord best(-1, -1);
+    FORCELL {
+        if (now[ID(i,j)] != UNKNOWN) continue;
+        int score = localConstraintScore(now, i, j);
+        if (score > bestScore) {
+            bestScore = score;
+            best = cord(i, j);
+        }
+    }
+    return best;
+}
+
+struct BranchCandidate {
+    Slither state;
+    int unknownCount;
+};
+
+static bool solve(Slither now, bool normalized = false, int depth = 0) {
+    if (!normalized && !normalize(now)) return false;
+
+    auto [i, j] = chooseBranchCell(now);
     if (i == -1) {
         if (checkNumber(now)) {
             finalAns = std::move(now);
@@ -643,11 +904,28 @@ static bool solve(Slither now) {
         }
     }
 
-    auto nxt = (rnd() & 1) ? INNER : OUTER;
-    now[ID(i,j)] = nxt;
-    if (solve(now)) return true;
-    now[ID(i,j)] = diff(nxt);
-    if (solve(now)) return true;
+    BranchCandidate cand[2];
+    int cnt = 0;
+    for (Status sta : {INNER, OUTER}) {
+        Slither nxt = now;
+        nxt[ID(i,j)] = sta;
+        if (normalize(nxt)) {
+            cand[cnt++] = BranchCandidate{std::move(nxt), 0};
+            cand[cnt - 1].unknownCount = countUnknown(cand[cnt - 1].state);
+        }
+    }
+
+    if (cnt == 2) {
+        if (depth < kBranchMoreDepth) {
+            if (cand[1].unknownCount > cand[0].unknownCount)
+                swap(cand[0], cand[1]);
+        } else
+        if (cand[1].unknownCount < cand[0].unknownCount) {
+            swap(cand[0], cand[1]);
+        }
+    }
+    for (int t = 0; t < cnt; ++t)
+        if (solve(std::move(cand[t].state), true, depth + 1)) return true;
     return false;
 }
 
@@ -655,7 +933,7 @@ static bool solve(Slither now) {
 static void print_solution_ascii(const vector<string>& puzzle, const Slither& solved) {
     int n = (int)puzzle.size();
     int m = (int)puzzle[0].size();
-    auto is_diff_region = [](Status a, Status b) { return a != b;};
+    auto is_diff_region = [](Status a, Status b) { return a != b; };
 
     vector<string> buf(2 * n + 3, string(4 * m + 5, ' '));
 
@@ -715,9 +993,9 @@ vector<string> Slitherlink(vector<string> _board){
         FORCELL{
             ans[i-1][j-1] = (finalAns[ID(i,j)] == INNER) ? '*' : '.';
         }
-        #ifdef LOCAL
+#ifdef LOCAL
         print_solution_ascii(_board, finalAns);
-        #endif
+#endif
         return ans;
     } else {
         cerr << "Slitherlink: no solution." << endl;
@@ -729,8 +1007,8 @@ vector<string> Slitherlink(vector<string> _board){
 int count_sol = 0;
 
 static void countSol(Slither now) {
-    if (!applyRules(now) || !checkHole(now) || !isConnected(now)) return;
-    auto [i, j] = findFirst(now, UNKNOWN);
+    if (!normalize(now)) return;
+    auto [i, j] = chooseBranchCell(now);
     if (i == -1) {
         count_sol += checkNumber(now);
         return;
