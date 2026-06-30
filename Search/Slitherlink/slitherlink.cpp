@@ -7,7 +7,82 @@
 #include <vector>
 using namespace std;
 
-static constexpr int kBranchMoreDepth = 4;
+#ifndef SLINK_BRANCH_MORE_DEPTH
+#define SLINK_BRANCH_MORE_DEPTH 4
+#endif
+static constexpr int kBranchMoreDepth = SLINK_BRANCH_MORE_DEPTH;
+#ifndef SLINK_BRANCH_MORE_DEPTH_SMALL
+#define SLINK_BRANCH_MORE_DEPTH_SMALL 8
+#endif
+static constexpr int kBranchMoreDepthSmall = SLINK_BRANCH_MORE_DEPTH_SMALL;
+#ifndef SLINK_CONNECTOR_DEPTH
+#define SLINK_CONNECTOR_DEPTH 1000000
+#endif
+static constexpr int kConnectorDepth = SLINK_CONNECTOR_DEPTH;
+#ifndef SLINK_CONNECTOR_MIN_SIZE
+#define SLINK_CONNECTOR_MIN_SIZE 25
+#endif
+static constexpr int kConnectorMinSize = SLINK_CONNECTOR_MIN_SIZE;
+#ifndef SLINK_CLUSTER_MIN_SIZE
+#define SLINK_CLUSTER_MIN_SIZE 24
+#endif
+static constexpr int kClusterMinSize = SLINK_CLUSTER_MIN_SIZE;
+#ifndef SLINK_INNER_CONNECTOR_MIN_ZEROS
+#define SLINK_INNER_CONNECTOR_MIN_ZEROS 15
+#endif
+static constexpr int kInnerConnectorMinZeros = SLINK_INNER_CONNECTOR_MIN_ZEROS;
+#ifndef SLINK_SCORE_ADJ
+#define SLINK_SCORE_ADJ 0
+#endif
+#ifndef SLINK_SCORE_NUM_BASE
+#define SLINK_SCORE_NUM_BASE 320
+#endif
+#ifndef SLINK_SCORE_NUM_UNK
+#define SLINK_SCORE_NUM_UNK 40
+#endif
+#ifndef SLINK_SCORE_VERTEX_BASE
+#define SLINK_SCORE_VERTEX_BASE 8
+#endif
+#ifndef SLINK_SCORE_VERTEX_UNK
+#define SLINK_SCORE_VERTEX_UNK 1
+#endif
+#ifndef SLINK_LARGE_SCORE_MIN_SIZE
+#define SLINK_LARGE_SCORE_MIN_SIZE 28
+#endif
+static constexpr int kLargeScoreMinSize = SLINK_LARGE_SCORE_MIN_SIZE;
+#ifndef SLINK_LOOKAHEAD_TOP
+#define SLINK_LOOKAHEAD_TOP 32
+#endif
+static constexpr int kLookaheadTop = SLINK_LOOKAHEAD_TOP;
+#ifndef SLINK_LOOKAHEAD_TOP_LARGE
+#define SLINK_LOOKAHEAD_TOP_LARGE 64
+#endif
+static constexpr int kLookaheadTopLarge = SLINK_LOOKAHEAD_TOP_LARGE;
+static constexpr int kLookaheadStorage = kLookaheadTop > kLookaheadTopLarge ? kLookaheadTop : kLookaheadTopLarge;
+#ifndef SLINK_LOOKAHEAD_MIN_SIZE
+#define SLINK_LOOKAHEAD_MIN_SIZE 19
+#endif
+static constexpr int kLookaheadMinSize = SLINK_LOOKAHEAD_MIN_SIZE;
+#ifndef SLINK_LOOKAHEAD_MAX_SIZE
+#define SLINK_LOOKAHEAD_MAX_SIZE 28
+#endif
+static constexpr int kLookaheadMaxSize = SLINK_LOOKAHEAD_MAX_SIZE;
+#ifndef SLINK_LOOKAHEAD_DEPTH
+#define SLINK_LOOKAHEAD_DEPTH 1000000
+#endif
+static constexpr int kLookaheadDepth = SLINK_LOOKAHEAD_DEPTH;
+#ifndef SLINK_FULL_TOP_DEPTH
+#define SLINK_FULL_TOP_DEPTH 0
+#endif
+static constexpr int kFullTopDepth = SLINK_FULL_TOP_DEPTH;
+#ifndef SLINK_LOOKAHEAD_TOP_DEEP
+#define SLINK_LOOKAHEAD_TOP_DEEP 40
+#endif
+static constexpr int kLookaheadTopDeep = SLINK_LOOKAHEAD_TOP_DEEP;
+#ifndef SLINK_RECT_CLUSTER_MAX_MASKS
+#define SLINK_RECT_CLUSTER_MAX_MASKS 36
+#endif
+static constexpr size_t kRectClusterMaxMasks = SLINK_RECT_CLUSTER_MAX_MASKS;
 
 // ===== 全局尺寸（供 ID 宏使用） =====
 int n, m;
@@ -50,10 +125,28 @@ typedef vector<Status> Slither;
 vector<string> board;
 vector<cord> numberedCells;
 vector<cord> vertexCells;
+int zeroClues = 0;
 Slither finalAns;
 vector<size_t> bfsQueue;
 vector<uint32_t> connectedMark;
 uint32_t connectedStamp = 0;
+vector<int> dfsDisc;
+vector<int> dfsLow;
+vector<int> dfsSubCount;
+vector<uint32_t> dfsSeen;
+uint32_t dfsStamp = 0;
+
+struct LocalCluster {
+    array<size_t, 16> ids{};
+    array<cord, 8> clues{};
+    int cnt = 0;
+    int clueCnt = 0;
+    bool valid = true;
+    uint64_t allBits = 0;
+    vector<uint64_t> masks;
+};
+
+vector<LocalCluster> localClusters;
 
 // ===== 工具函数 =====
 static inline Slither newSlither() {
@@ -89,8 +182,12 @@ static inline void addBoundary(const vector<string> &_board) {
 
     numberedCells.clear();
     numberedCells.reserve((size_t)n * m);
+    zeroClues = 0;
     FORCELL {
-        if (board[i][j] != '.') numberedCells.emplace_back(i, j);
+        if (board[i][j] != '.') {
+            numberedCells.emplace_back(i, j);
+            zeroClues += board[i][j] == '0';
+        }
     }
 
     vertexCells.clear();
@@ -107,6 +204,180 @@ static inline cord findFirst(const Slither &now, Status sta) {
             return cord(i, j);
     }
     return cord(-1,-1);
+}
+
+static inline int clusterIndexOf(const LocalCluster &cluster, size_t id) {
+    for (int p = 0; p < cluster.cnt; ++p)
+        if (cluster.ids[p] == id) return p;
+    return -1;
+}
+
+static inline void addClusterCell(LocalCluster &cluster, int i, int j) {
+    if (!cluster.valid) return;
+    if (!INBOARD(i, j)) return;
+    size_t id = ID(i, j);
+    if (clusterIndexOf(cluster, id) != -1) return;
+    if (cluster.cnt == (int)cluster.ids.size()) {
+        cluster.valid = false;
+        return;
+    }
+    cluster.ids[cluster.cnt++] = id;
+}
+
+static inline int clusterMaskValue(const LocalCluster &cluster, uint64_t mask, int i, int j, bool &known) {
+    if (!INBOARD(i, j)) return 0;
+    int idx = clusterIndexOf(cluster, ID(i, j));
+    if (idx == -1) {
+        known = false;
+        return 0;
+    }
+    return (mask >> idx) & 1;
+}
+
+static inline bool clusterMaskNumberOk(const LocalCluster &cluster, uint64_t mask, int i, int j) {
+    bool known = true;
+    int center = clusterMaskValue(cluster, mask, i, j, known);
+    if (!known) return false;
+    int cnt = 0;
+    for (int k = 0; k < 4; ++k) {
+        bool adjKnown = true;
+        int adj = clusterMaskValue(cluster, mask, i + adj4[k][0], j + adj4[k][1], adjKnown);
+        if (!adjKnown) return false;
+        cnt += center != adj;
+    }
+    return cnt == board[i][j] - '0';
+}
+
+static inline bool clusterMaskVertexOk(const LocalCluster &cluster, uint64_t mask, int i, int j) {
+    bool known = true;
+    int a = clusterMaskValue(cluster, mask, i, j, known);
+    if (!known) return true;
+    int b = clusterMaskValue(cluster, mask, i, j + 1, known);
+    if (!known) return true;
+    int c = clusterMaskValue(cluster, mask, i + 1, j, known);
+    if (!known) return true;
+    int d = clusterMaskValue(cluster, mask, i + 1, j + 1, known);
+    if (!known) return true;
+
+    int deg = 0;
+    deg += a != b;
+    deg += b != d;
+    deg += c != d;
+    deg += a != c;
+    return deg == 0 || deg == 2;
+}
+
+static inline void finishLocalCluster(LocalCluster &cluster) {
+    if (!cluster.valid) return;
+    const uint64_t totalMasks = 1ULL << cluster.cnt;
+    cluster.allBits = totalMasks - 1;
+    int minI = n + 1, maxI = 0, minJ = m + 1, maxJ = 0;
+    for (int p = 0; p < cluster.cnt; ++p) {
+        int x = (int)(cluster.ids[p] / (size_t)(m + 2));
+        int y = (int)(cluster.ids[p] % (size_t)(m + 2));
+        minI = min(minI, x);
+        maxI = max(maxI, x);
+        minJ = min(minJ, y);
+        maxJ = max(maxJ, y);
+    }
+
+    for (uint64_t mask = 0; mask < totalMasks; ++mask) {
+        bool clueOk = true;
+        for (int p = 0; p < cluster.clueCnt; ++p) {
+            auto [i, j] = cluster.clues[p];
+            if (!clusterMaskNumberOk(cluster, mask, i, j)) {
+                clueOk = false;
+                break;
+            }
+        }
+        if (!clueOk) continue;
+
+        bool ok = true;
+        for (int i = max(0, minI - 1); ok && i <= min(n, maxI); ++i) {
+            for (int j = max(0, minJ - 1); j <= min(m, maxJ); ++j) {
+                if (!clusterMaskVertexOk(cluster, mask, i, j)) {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        if (ok) cluster.masks.push_back(mask);
+    }
+}
+
+static inline void buildLocalClusters() {
+    localClusters.clear();
+    if (n < kClusterMinSize || m < kClusterMinSize ||
+        n > kLookaheadMaxSize || m > kLookaheadMaxSize) {
+        return;
+    }
+    localClusters.reserve(numberedCells.size() * 2);
+    for (auto [i, j] : numberedCells) {
+        const int dirs[4][2] = {{0, 1}, {1, 0}, {1, 1}, {1, -1}};
+        for (int dir = 0; dir < 4; ++dir) {
+            int di = dirs[dir][0], dj = dirs[dir][1];
+            int x = i + di, y = j + dj;
+            if (!INBOARD(x, y) || board[x][y] == '.') continue;
+
+            LocalCluster cluster;
+            cluster.clues[cluster.clueCnt++] = cord(i, j);
+            cluster.clues[cluster.clueCnt++] = cord(x, y);
+            for (int t = 0; t < cluster.clueCnt; ++t) {
+                auto [ci, cj] = cluster.clues[t];
+                addClusterCell(cluster, ci, cj);
+                for (int k = 0; k < 4; ++k)
+                    addClusterCell(cluster, ci + adj4[k][0], cj + adj4[k][1]);
+            }
+            finishLocalCluster(cluster);
+            if (!cluster.masks.empty()) localClusters.push_back(std::move(cluster));
+        }
+    }
+
+    for (int i = 1; i < n; ++i) {
+        for (int j = 1; j < m; ++j) {
+            LocalCluster cluster;
+            for (int di = 0; di <= 1; ++di) {
+                for (int dj = 0; dj <= 1; ++dj) {
+                    int x = i + di, y = j + dj;
+                    if (board[x][y] != '.') cluster.clues[cluster.clueCnt++] = cord(x, y);
+                }
+            }
+            if (cluster.clueCnt < 3) continue;
+            for (int t = 0; t < cluster.clueCnt; ++t) {
+                auto [ci, cj] = cluster.clues[t];
+                addClusterCell(cluster, ci, cj);
+                for (int k = 0; k < 4; ++k)
+                    addClusterCell(cluster, ci + adj4[k][0], cj + adj4[k][1]);
+            }
+            finishLocalCluster(cluster);
+            if (!cluster.masks.empty()) localClusters.push_back(std::move(cluster));
+        }
+    }
+
+    const int rects[2][2] = {{2, 3}, {3, 2}};
+    for (auto [height, width] : rects) {
+        for (int i = 1; i + height - 1 <= n; ++i) {
+            for (int j = 1; j + width - 1 <= m; ++j) {
+                LocalCluster cluster;
+                for (int di = 0; di < height; ++di) {
+                    for (int dj = 0; dj < width; ++dj) {
+                        int x = i + di, y = j + dj;
+                        if (board[x][y] != '.') cluster.clues[cluster.clueCnt++] = cord(x, y);
+                    }
+                }
+                if (cluster.clueCnt < 4) continue;
+                for (int t = 0; t < cluster.clueCnt; ++t) {
+                    auto [ci, cj] = cluster.clues[t];
+                    addClusterCell(cluster, ci, cj);
+                    for (int k = 0; k < 4; ++k)
+                        addClusterCell(cluster, ci + adj4[k][0], cj + adj4[k][1]);
+                }
+                finishLocalCluster(cluster);
+                if (cluster.valid && !cluster.masks.empty() && cluster.masks.size() <= kRectClusterMaxMasks)
+                    localClusters.push_back(std::move(cluster));
+            }
+        }
+    }
 }
 
 // 检查数字周围是否有正确数量的线
@@ -399,6 +670,39 @@ static inline bool applyVertexConstraint(Slither &now, int i, int j, bool &cg) {
     return true;
 }
 
+static inline bool applyLocalClusterConstraint(Slither &now, const LocalCluster &cluster, bool &cg) {
+    uint64_t knownInner = 0;
+    uint64_t knownOuter = 0;
+    for (int p = 0; p < cluster.cnt; ++p) {
+        Status cur = now[cluster.ids[p]];
+        if (cur == INNER) knownInner |= 1ULL << p;
+        else if (cur == OUTER) knownOuter |= 1ULL << p;
+    }
+
+    uint64_t possibleInner = 0;
+    uint64_t possibleOuter = 0;
+    bool any = false;
+    for (uint64_t mask : cluster.masks) {
+        if ((mask & knownOuter) != 0) continue;
+        if (((~mask) & knownInner) != 0) continue;
+        any = true;
+        possibleInner |= mask;
+        possibleOuter |= (~mask) & cluster.allBits;
+    }
+    if (!any) return false;
+
+    for (int p = 0; p < cluster.cnt; ++p) {
+        Status &cur = now[cluster.ids[p]];
+        if (cur != UNKNOWN) continue;
+        bool canInner = (possibleInner >> p) & 1;
+        bool canOuter = (possibleOuter >> p) & 1;
+        if (canInner == canOuter) continue;
+        cur = canInner ? INNER : OUTER;
+        cg = true;
+    }
+    return true;
+}
+
 static inline bool applyRules(Slither &now) {
     bool cg = true;
     const bool eagerGeneric = n <= 16 && m <= 16;
@@ -412,6 +716,12 @@ static inline bool applyRules(Slither &now) {
             }
             for (auto [i, j] : vertexCells) {
                 if (!applyVertexConstraint(now, i, j, cg)) return false;
+            }
+            if (n >= kClusterMinSize && m >= kClusterMinSize &&
+                n <= kLookaheadMaxSize && m <= kLookaheadMaxSize) {
+                for (const auto &cluster : localClusters) {
+                    if (!applyLocalClusterConstraint(now, cluster, cg)) return false;
+                }
             }
             if (cg && !eagerGeneric) {
                 runGeneric = eagerGeneric;
@@ -820,14 +1130,131 @@ static inline void initalRules(Slither &now) {
     if (board[n][m] == '1' && board[n][m-1] == '3') setStatus(now, n, m-1, INNER);
 }
 
-static inline bool normalize(Slither &now) {
+static inline bool forceConnectivityConnectors(Slither &now, bool &changed);
+
+static inline void prepareDfsArrays(size_t total) {
+    if (dfsDisc.size() < total) {
+        dfsDisc.resize(total);
+        dfsLow.resize(total);
+        dfsSubCount.resize(total);
+        dfsSeen.resize(total);
+    }
+    if (++dfsStamp == 0) {
+        fill(dfsSeen.begin(), dfsSeen.end(), 0);
+        dfsStamp = 1;
+    }
+}
+
+static inline bool normalize(Slither &now, int depth = 0) {
     while (true) {
         if (!applyRules(now)) return false;
         bool holeChanged = false;
         if (!checkHole(now, &holeChanged)) return false;
         if (!isConnected(now)) return false;
-        if (!holeChanged) return true;
+        bool connectorChanged = false;
+        if (depth <= kConnectorDepth && !forceConnectivityConnectors(now, connectorChanged)) return false;
+        if (!holeChanged && !connectorChanged) return true;
     }
+}
+
+static void dfsInnerConnector(Slither &now, size_t u, size_t parent, int totalInner, bool &changed, int &timer) {
+    const size_t W = (size_t)m + 2;
+    dfsSeen[u] = dfsStamp;
+    dfsDisc[u] = dfsLow[u] = ++timer;
+    dfsSubCount[u] = (now[u] == INNER);
+    int i = (int)(u / W), j = (int)(u % W);
+
+    auto handleChild = [&](size_t v) {
+        if (now[v] == OUTER) return;
+        if (dfsSeen[v] != dfsStamp) {
+            dfsInnerConnector(now, v, u, totalInner, changed, timer);
+            dfsLow[u] = min(dfsLow[u], dfsLow[v]);
+            dfsSubCount[u] += dfsSubCount[v];
+            if (now[u] == UNKNOWN && dfsLow[v] >= dfsDisc[u] &&
+                dfsSubCount[v] > 0 && totalInner - dfsSubCount[v] > 0) {
+                now[u] = INNER;
+                changed = true;
+            }
+        } else if (v != parent) {
+            dfsLow[u] = min(dfsLow[u], dfsDisc[v]);
+        }
+    };
+
+    if (j < m) handleChild(u + 1);
+    if (i < n) handleChild(u + W);
+    if (j > 1) handleChild(u - 1);
+    if (i > 1) handleChild(u - W);
+}
+
+static inline bool forceInnerConnectors(Slither &now, bool &changed) {
+    int totalInner = 0;
+    size_t start = (size_t)-1;
+    FORCELL {
+        size_t id = ID(i, j);
+        if (now[id] == INNER) {
+            ++totalInner;
+            start = id;
+        }
+    }
+    if (totalInner <= 1) return true;
+
+    const size_t W = (size_t)m + 2;
+    const size_t total = ((size_t)n + 2) * W;
+    prepareDfsArrays(total);
+    int timer = 0;
+
+    dfsInnerConnector(now, start, (size_t)-1, totalInner, changed, timer);
+    return true;
+}
+
+static void dfsOuterConnector(Slither &now, size_t u, size_t parent, bool &changed, int &timer) {
+    const size_t W = (size_t)m + 2;
+    dfsSeen[u] = dfsStamp;
+    dfsDisc[u] = dfsLow[u] = ++timer;
+    int i = (int)(u / W), j = (int)(u % W);
+    dfsSubCount[u] = (i >= 1 && i <= n && j >= 1 && j <= m && now[u] == OUTER);
+
+    auto handleChild = [&](size_t v) {
+        if (now[v] == INNER) return;
+        if (dfsSeen[v] != dfsStamp) {
+            dfsOuterConnector(now, v, u, changed, timer);
+            dfsLow[u] = min(dfsLow[u], dfsLow[v]);
+            dfsSubCount[u] += dfsSubCount[v];
+            if (now[u] == UNKNOWN && dfsLow[v] >= dfsDisc[u] && dfsSubCount[v] > 0) {
+                now[u] = OUTER;
+                changed = true;
+            }
+        } else if (v != parent) {
+            dfsLow[u] = min(dfsLow[u], dfsDisc[v]);
+        }
+    };
+
+    if (j < m + 1) handleChild(u + 1);
+    if (i < n + 1) handleChild(u + W);
+    if (j > 0) handleChild(u - 1);
+    if (i > 0) handleChild(u - W);
+}
+
+static inline bool forceOuterConnectors(Slither &now, bool &changed) {
+    int totalBoardOuter = 0;
+    FORCELL {
+        totalBoardOuter += now[ID(i, j)] == OUTER;
+    }
+    if (totalBoardOuter == 0) return true;
+
+    const size_t W = (size_t)m + 2;
+    const size_t total = ((size_t)n + 2) * W;
+    prepareDfsArrays(total);
+    int timer = 0;
+
+    dfsOuterConnector(now, 0, (size_t)-1, changed, timer);
+    return true;
+}
+
+static inline bool forceConnectivityConnectors(Slither &now, bool &changed) {
+    if (n < kConnectorMinSize && m < kConnectorMinSize) return true;
+    if (zeroClues >= kInnerConnectorMinZeros && !forceInnerConnectors(now, changed)) return false;
+    return forceOuterConnectors(now, changed);
 }
 
 static inline int countUnknown(const Slither &now) {
@@ -838,11 +1265,36 @@ static inline int countUnknown(const Slither &now) {
     return ret;
 }
 
+struct BranchCandidate {
+    Slither state;
+    int unknownCount;
+};
+
+struct CellCandidate {
+    int i;
+    int j;
+    int score;
+};
+
+struct BranchChoice {
+    int i = -1;
+    int j = -1;
+    int cnt = -1;
+    int score = -1;
+    BranchCandidate cand[2];
+};
+
 static inline int localConstraintScore(const Slither &now, int i, int j) {
+    const bool largeBoardScore = n >= kLargeScoreMinSize || m >= kLargeScoreMinSize;
+    const int adjScore = largeBoardScore ? SLINK_SCORE_ADJ : 6;
+    const int numBase = largeBoardScore ? SLINK_SCORE_NUM_BASE : 80;
+    const int numUnknownPenalty = largeBoardScore ? SLINK_SCORE_NUM_UNK : 10;
+    const int vertexBase = largeBoardScore ? SLINK_SCORE_VERTEX_BASE : 24;
+    const int vertexUnknownPenalty = largeBoardScore ? SLINK_SCORE_VERTEX_UNK : 4;
     int score = 0;
 
     FORADJ4 {
-        if (now[ID(ADJX, ADJY)] != UNKNOWN) score += 6;
+        if (now[ID(ADJX, ADJY)] != UNKNOWN) score += adjScore;
     }
 
     const int di[5] = {0, 0, 1, 0, -1};
@@ -854,7 +1306,7 @@ static inline int localConstraintScore(const Slither &now, int i, int j) {
         if (now[ID(x, y)] == UNKNOWN) ++unk;
         for (int k = 0; k < 4; ++k)
             unk += now[ID(x + adj4[k][0], y + adj4[k][1])] == UNKNOWN;
-        score += 80 - 10 * unk;
+        score += numBase - numUnknownPenalty * unk;
     }
 
     for (int x = i - 1; x <= i; ++x) {
@@ -865,7 +1317,7 @@ static inline int localConstraintScore(const Slither &now, int i, int j) {
             unk += now[ID(x, y + 1)] == UNKNOWN;
             unk += now[ID(x + 1, y)] == UNKNOWN;
             unk += now[ID(x + 1, y + 1)] == UNKNOWN;
-            score += 24 - 4 * unk;
+            score += vertexBase - vertexUnknownPenalty * unk;
         }
     }
 
@@ -886,16 +1338,119 @@ static inline cord chooseBranchCell(const Slither &now) {
     return best;
 }
 
-struct BranchCandidate {
-    Slither state;
-    int unknownCount;
-};
+static inline int activeLookaheadTop(int depth) {
+    if (n < kLookaheadMinSize || m < kLookaheadMinSize ||
+        n > kLookaheadMaxSize || m > kLookaheadMaxSize) {
+        return 0;
+    }
+    if (n * m < 26 * 26) return kLookaheadTop;
+    return depth <= kFullTopDepth ? kLookaheadTopLarge : kLookaheadTopDeep;
+}
+
+static inline bool shouldUseLookahead(int depth) {
+    return depth <= kLookaheadDepth && activeLookaheadTop(depth) > 0;
+}
+
+static inline void insertTopCandidate(CellCandidate top[], int &cnt, int limit, const CellCandidate &cand) {
+    int pos = cnt;
+    if (pos < limit) {
+        top[cnt++] = cand;
+    } else if (cand.score > top[cnt - 1].score) {
+        pos = cnt - 1;
+        top[pos] = cand;
+    } else {
+        return;
+    }
+    while (pos > 0 && top[pos].score > top[pos - 1].score) {
+        swap(top[pos], top[pos - 1]);
+        --pos;
+    }
+}
+
+static inline void orderBranchCandidates(BranchCandidate cand[2], int cnt, int depth) {
+    if (cnt != 2) return;
+    const int branchMoreDepth = (n < 28 && m < 28) ? kBranchMoreDepthSmall : kBranchMoreDepth;
+    if (depth < branchMoreDepth) {
+        if (cand[1].unknownCount > cand[0].unknownCount)
+            swap(cand[0], cand[1]);
+    } else if (cand[1].unknownCount < cand[0].unknownCount) {
+        swap(cand[0], cand[1]);
+    }
+}
+
+static inline int buildBranchCandidates(const Slither &now, int i, int j, int depth, BranchCandidate cand[2]) {
+    int cnt = 0;
+    for (Status sta : {INNER, OUTER}) {
+        Slither nxt = now;
+        nxt[ID(i,j)] = sta;
+        if (normalize(nxt, depth)) {
+            cand[cnt++] = BranchCandidate{std::move(nxt), 0};
+            cand[cnt - 1].unknownCount = countUnknown(cand[cnt - 1].state);
+        }
+    }
+    return cnt;
+}
+
+static inline bool betterLookaheadChoice(const BranchChoice &lhs, const BranchChoice &rhs) {
+    if (rhs.cnt == -1) return true;
+    if (lhs.cnt != rhs.cnt) return lhs.cnt < rhs.cnt;
+
+    int lhsSum = 0, rhsSum = 0;
+    for (int t = 0; t < lhs.cnt; ++t) {
+        int unk = lhs.cand[t].unknownCount;
+        lhsSum += unk;
+    }
+    for (int t = 0; t < rhs.cnt; ++t) {
+        int unk = rhs.cand[t].unknownCount;
+        rhsSum += unk;
+    }
+
+    int lhsBest = lhs.cnt == 0 ? -1 : lhs.cand[0].unknownCount;
+    int rhsBest = rhs.cnt == 0 ? -1 : rhs.cand[0].unknownCount;
+
+    if (lhsSum != rhsSum) return lhsSum < rhsSum;
+    if (lhsBest != rhsBest) return lhsBest < rhsBest;
+    return lhs.score > rhs.score;
+}
+
+static inline BranchChoice chooseBranch(Slither &now, int depth) {
+    BranchChoice choice;
+    if (!shouldUseLookahead(depth)) {
+        auto [i, j] = chooseBranchCell(now);
+        choice.i = i;
+        choice.j = j;
+        return choice;
+    }
+
+    CellCandidate top[kLookaheadStorage > 0 ? kLookaheadStorage : 1];
+    int topCnt = 0;
+    int topLimit = activeLookaheadTop(depth);
+    FORCELL {
+        if (now[ID(i,j)] != UNKNOWN) continue;
+        insertTopCandidate(top, topCnt, topLimit, CellCandidate{i, j, localConstraintScore(now, i, j)});
+    }
+    if (topCnt == 0) return choice;
+
+    for (int t = 0; t < topCnt; ++t) {
+        BranchChoice cur;
+        cur.i = top[t].i;
+        cur.j = top[t].j;
+        cur.score = top[t].score;
+        cur.cnt = buildBranchCandidates(now, cur.i, cur.j, depth + 1, cur.cand);
+        orderBranchCandidates(cur.cand, cur.cnt, depth);
+        if (betterLookaheadChoice(cur, choice)) {
+            choice = std::move(cur);
+            if (choice.cnt == 0) break;
+        }
+    }
+    return choice;
+}
 
 static bool solve(Slither now, bool normalized = false, int depth = 0) {
-    if (!normalized && !normalize(now)) return false;
+    if (!normalized && !normalize(now, depth)) return false;
 
-    auto [i, j] = chooseBranchCell(now);
-    if (i == -1) {
+    BranchChoice choice = chooseBranch(now, depth);
+    if (choice.i == -1) {
         if (checkNumber(now)) {
             finalAns = std::move(now);
             return true;
@@ -904,28 +1459,12 @@ static bool solve(Slither now, bool normalized = false, int depth = 0) {
         }
     }
 
-    BranchCandidate cand[2];
-    int cnt = 0;
-    for (Status sta : {INNER, OUTER}) {
-        Slither nxt = now;
-        nxt[ID(i,j)] = sta;
-        if (normalize(nxt)) {
-            cand[cnt++] = BranchCandidate{std::move(nxt), 0};
-            cand[cnt - 1].unknownCount = countUnknown(cand[cnt - 1].state);
-        }
+    if (choice.cnt == -1) {
+        choice.cnt = buildBranchCandidates(now, choice.i, choice.j, depth + 1, choice.cand);
+        orderBranchCandidates(choice.cand, choice.cnt, depth);
     }
-
-    if (cnt == 2) {
-        if (depth < kBranchMoreDepth) {
-            if (cand[1].unknownCount > cand[0].unknownCount)
-                swap(cand[0], cand[1]);
-        } else
-        if (cand[1].unknownCount < cand[0].unknownCount) {
-            swap(cand[0], cand[1]);
-        }
-    }
-    for (int t = 0; t < cnt; ++t)
-        if (solve(std::move(cand[t].state), true, depth + 1)) return true;
+    for (int t = 0; t < choice.cnt; ++t)
+        if (solve(std::move(choice.cand[t].state), true, depth + 1)) return true;
     return false;
 }
 
@@ -986,8 +1525,10 @@ static void print_solution_ascii(const vector<string>& puzzle, const Slither& so
 // === 入口 ===
 vector<string> Slitherlink(vector<string> _board){
     addBoundary(_board);
+    buildLocalClusters();
     auto slither = newSlither();
     initalRules(slither);
+    finalAns.clear();
     if (solve(slither)) {
         auto ans = _board;
         FORCELL{
