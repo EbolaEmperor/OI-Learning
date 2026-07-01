@@ -23,6 +23,10 @@ static constexpr int kConnectorDepth = SLINK_CONNECTOR_DEPTH;
 #define SLINK_CONNECTOR_MIN_SIZE 25
 #endif
 static constexpr int kConnectorMinSize = SLINK_CONNECTOR_MIN_SIZE;
+#ifndef SLINK_CONNECTOR_UNKNOWN_LIMIT
+#define SLINK_CONNECTOR_UNKNOWN_LIMIT 96
+#endif
+static constexpr int kConnectorUnknownLimit = SLINK_CONNECTOR_UNKNOWN_LIMIT;
 #ifndef SLINK_CLUSTER_MIN_SIZE
 #define SLINK_CLUSTER_MIN_SIZE 19
 #endif
@@ -136,11 +140,19 @@ struct VertexConstraint {
     array<size_t, 4> ids{};
 };
 
+struct CellConstraintRefs {
+    array<int, 5> numbers{};
+    array<int, 4> vertices{};
+    uint8_t numberCnt = 0;
+    uint8_t vertexCnt = 0;
+};
+
 vector<string> board;
 vector<cord> numberedCells;
 vector<cord> vertexCells;
 vector<NumberConstraint> numberConstraints;
 vector<VertexConstraint> vertexConstraints;
+vector<CellConstraintRefs> cellConstraintRefs;
 int zeroClues = 0;
 Slither finalAns;
 vector<size_t> bfsQueue;
@@ -170,6 +182,7 @@ vector<LocalCluster> localClusters;
 
 // ===== 工具函数 =====
 static inline void buildConstraintTables();
+static inline void buildCellConstraintRefs();
 
 static inline Slither newSlither() {
     // 一维数组，默认 UNKNOWN；边界设为 OUTER
@@ -236,6 +249,35 @@ static inline void addBoundary(const vector<string> &_board) {
                 ID(i + 1, j + 1)
             }});
         }
+    buildCellConstraintRefs();
+}
+
+static inline bool isBoardId(size_t id) {
+    const size_t W = (size_t)m + 2;
+    int i = (int)(id / W);
+    int j = (int)(id % W);
+    return i >= 1 && i <= n && j >= 1 && j <= m;
+}
+
+static inline void buildCellConstraintRefs() {
+    const size_t total = ((size_t)n + 2) * ((size_t)m + 2);
+    cellConstraintRefs.assign(total, CellConstraintRefs{});
+
+    for (int idx = 0; idx < (int)numberConstraints.size(); ++idx) {
+        for (size_t id : numberConstraints[idx].ids) {
+            if (!isBoardId(id)) continue;
+            CellConstraintRefs &refs = cellConstraintRefs[id];
+            refs.numbers[refs.numberCnt++] = idx;
+        }
+    }
+
+    for (int idx = 0; idx < (int)vertexConstraints.size(); ++idx) {
+        for (size_t id : vertexConstraints[idx].ids) {
+            if (!isBoardId(id)) continue;
+            CellConstraintRefs &refs = cellConstraintRefs[id];
+            refs.vertices[refs.vertexCnt++] = idx;
+        }
+    }
 }
 
 static inline void buildConstraintTables() {
@@ -649,14 +691,18 @@ static inline bool setStatus(Slither &now, int i, int j, Status sta) {
     }
 }
 
-static inline bool forceStatus(Slither &now, int i, int j, Status sta, bool &cg) {
-    Status &cur = now[ID(i,j)];
+static inline bool forceStatusById(Slither &now, size_t id, Status sta, bool &cg) {
+    Status &cur = now[id];
     if (cur == UNKNOWN) {
         cur = sta;
         cg = true;
         return true;
     }
     return cur == sta;
+}
+
+static inline bool forceStatus(Slither &now, int i, int j, Status sta, bool &cg) {
+    return forceStatusById(now, ID(i, j), sta, cg);
 }
 
 static inline Status diff(Status sta) {
@@ -666,14 +712,7 @@ static inline Status diff(Status sta) {
 static inline bool makeSame(Slither &now, int i, int j, int i0, int j0, bool &cg) {
     Status &tar = now[ID(i0,j0)];
     if (tar != UNKNOWN) {
-        Status &cur = now[ID(i,j)];
-        if (cur == UNKNOWN) {
-            cur = tar;
-            cg = true;
-            return true;
-        } else {
-            return cur == tar;
-        }
+        return forceStatusById(now, ID(i, j), tar, cg);
     }
     return true;
 }
@@ -681,14 +720,7 @@ static inline bool makeSame(Slither &now, int i, int j, int i0, int j0, bool &cg
 static inline bool makeDiff(Slither &now, int i, int j, int i0, int j0, bool &cg) {
     Status &tar = now[ID(i0,j0)];
     if (tar != UNKNOWN) {
-        Status &cur = now[ID(i,j)];
-        if (cur == UNKNOWN) {
-            cur = diff(tar);
-            cg = true;
-            return true;
-        } else {
-            return cur != tar;
-        }
+        return forceStatusById(now, ID(i, j), diff(tar), cg);
     }
     return true;
 }
@@ -723,8 +755,8 @@ static inline bool applyNumberConstraint(Slither &now, const NumberConstraint &c
     if (!res.valid) return false;
     for (int p = 0; p < 5; ++p) {
         if (res.force[p] != UNKNOWN) {
-            now[ids[p]] = (Status)res.force[p];
-            cg = true;
+            if (!forceStatusById(now, ids[p], (Status)res.force[p], cg))
+                return false;
         }
     }
     return true;
@@ -742,8 +774,8 @@ static inline bool applyVertexConstraint(Slither &now, const VertexConstraint &c
     if (!res.valid) return false;
     for (int p = 0; p < 4; ++p) {
         if (res.force[p] != UNKNOWN) {
-            now[ids[p]] = (Status)res.force[p];
-            cg = true;
+            if (!forceStatusById(now, ids[p], (Status)res.force[p], cg))
+                return false;
         }
     }
     return true;
@@ -779,8 +811,8 @@ static inline bool applyLocalClusterConstraint(Slither &now, const LocalCluster 
         bool canInner = (possibleInner >> p) & 1;
         bool canOuter = (possibleOuter >> p) & 1;
         if (canInner == canOuter) continue;
-        cur = canInner ? INNER : OUTER;
-        cg = true;
+        if (!forceStatusById(now, cluster.ids[p], canInner ? INNER : OUTER, cg))
+            return false;
     }
     return true;
 }
@@ -1335,6 +1367,13 @@ static inline bool forceOuterConnectors(Slither &now, bool &changed) {
 
 static inline bool forceConnectivityConnectors(Slither &now, bool &changed) {
     if (n < kConnectorMinSize && m < kConnectorMinSize) return true;
+    if (kConnectorUnknownLimit >= 0) {
+        int unknown = 0;
+        FORCELL {
+            if (now[ID(i, j)] == UNKNOWN && ++unknown > kConnectorUnknownLimit)
+                return true;
+        }
+    }
     if (zeroClues >= kInnerConnectorMinZeros && !forceInnerConnectors(now, changed)) return false;
     return forceOuterConnectors(now, changed);
 }
@@ -1379,28 +1418,21 @@ static inline int localConstraintScore(const Slither &now, int i, int j) {
         if (now[ID(ADJX, ADJY)] != UNKNOWN) score += adjScore;
     }
 
-    const int di[5] = {0, 0, 1, 0, -1};
-    const int dj[5] = {0, 1, 0, -1, 0};
-    for (int t = 0; t < 5; ++t) {
-        int x = i + di[t], y = j + dj[t];
-        if (!INBOARD(x, y) || board[x][y] == '.') continue;
+    const CellConstraintRefs &refs = cellConstraintRefs[ID(i, j)];
+    for (int t = 0; t < refs.numberCnt; ++t) {
+        const NumberConstraint &constraint = numberConstraints[refs.numbers[t]];
         int unk = 0;
-        if (now[ID(x, y)] == UNKNOWN) ++unk;
-        for (int k = 0; k < 4; ++k)
-            unk += now[ID(x + adj4[k][0], y + adj4[k][1])] == UNKNOWN;
+        for (size_t id : constraint.ids)
+            unk += now[id] == UNKNOWN;
         score += numBase - numUnknownPenalty * unk;
     }
 
-    for (int x = i - 1; x <= i; ++x) {
-        for (int y = j - 1; y <= j; ++y) {
-            if (x < 0 || x > n || y < 0 || y > m) continue;
-            int unk = 0;
-            unk += now[ID(x, y)] == UNKNOWN;
-            unk += now[ID(x, y + 1)] == UNKNOWN;
-            unk += now[ID(x + 1, y)] == UNKNOWN;
-            unk += now[ID(x + 1, y + 1)] == UNKNOWN;
-            score += vertexBase - vertexUnknownPenalty * unk;
-        }
+    for (int t = 0; t < refs.vertexCnt; ++t) {
+        const VertexConstraint &constraint = vertexConstraints[refs.vertices[t]];
+        int unk = 0;
+        for (size_t id : constraint.ids)
+            unk += now[id] == UNKNOWN;
+        score += vertexBase - vertexUnknownPenalty * unk;
     }
 
     return score;
