@@ -24,7 +24,7 @@ static constexpr int kConnectorDepth = SLINK_CONNECTOR_DEPTH;
 #endif
 static constexpr int kConnectorMinSize = SLINK_CONNECTOR_MIN_SIZE;
 #ifndef SLINK_CLUSTER_MIN_SIZE
-#define SLINK_CLUSTER_MIN_SIZE 24
+#define SLINK_CLUSTER_MIN_SIZE 19
 #endif
 static constexpr int kClusterMinSize = SLINK_CLUSTER_MIN_SIZE;
 #ifndef SLINK_INNER_CONNECTOR_MIN_ZEROS
@@ -122,9 +122,25 @@ enum Status : uint8_t {
 typedef pair<int,int> cord;
 typedef vector<Status> Slither;
 
+struct ConstraintResult {
+    uint8_t valid = 0;
+    array<uint8_t, 5> force{};
+};
+
+struct NumberConstraint {
+    array<size_t, 5> ids{};
+    uint8_t lim = 0;
+};
+
+struct VertexConstraint {
+    array<size_t, 4> ids{};
+};
+
 vector<string> board;
 vector<cord> numberedCells;
 vector<cord> vertexCells;
+vector<NumberConstraint> numberConstraints;
+vector<VertexConstraint> vertexConstraints;
 int zeroClues = 0;
 Slither finalAns;
 vector<size_t> bfsQueue;
@@ -135,6 +151,9 @@ vector<int> dfsLow;
 vector<int> dfsSubCount;
 vector<uint32_t> dfsSeen;
 uint32_t dfsStamp = 0;
+array<array<ConstraintResult, 243>, 5> numberConstraintTable;
+array<ConstraintResult, 81> vertexConstraintTable;
+bool constraintTablesReady = false;
 
 struct LocalCluster {
     array<size_t, 16> ids{};
@@ -144,11 +163,14 @@ struct LocalCluster {
     bool valid = true;
     uint64_t allBits = 0;
     vector<uint64_t> masks;
+    vector<uint64_t> outerMasks;
 };
 
 vector<LocalCluster> localClusters;
 
 // ===== 工具函数 =====
+static inline void buildConstraintTables();
+
 static inline Slither newSlither() {
     // 一维数组，默认 UNKNOWN；边界设为 OUTER
     Slither ret((size_t)(n + 2) * (m + 2), UNKNOWN);
@@ -164,6 +186,7 @@ static inline Slither newSlither() {
 }
 
 static inline void addBoundary(const vector<string> &_board) {
+    buildConstraintTables();
     n = (int)_board.size();
     m = (int)_board[0].size();
     board.clear();
@@ -182,19 +205,132 @@ static inline void addBoundary(const vector<string> &_board) {
 
     numberedCells.clear();
     numberedCells.reserve((size_t)n * m);
+    numberConstraints.clear();
+    numberConstraints.reserve((size_t)n * m);
     zeroClues = 0;
     FORCELL {
         if (board[i][j] != '.') {
             numberedCells.emplace_back(i, j);
+            numberConstraints.push_back(NumberConstraint{{
+                ID(i, j),
+                ID(i, j + 1),
+                ID(i + 1, j),
+                ID(i, j - 1),
+                ID(i - 1, j)
+            }, (uint8_t)(board[i][j] - '0')});
             zeroClues += board[i][j] == '0';
         }
     }
 
     vertexCells.clear();
     vertexCells.reserve((size_t)(n + 1) * (m + 1));
+    vertexConstraints.clear();
+    vertexConstraints.reserve((size_t)(n + 1) * (m + 1));
     for (int i = 0; i <= n; ++i)
-        for (int j = 0; j <= m; ++j)
+        for (int j = 0; j <= m; ++j) {
             vertexCells.emplace_back(i, j);
+            vertexConstraints.push_back(VertexConstraint{{
+                ID(i, j),
+                ID(i, j + 1),
+                ID(i + 1, j),
+                ID(i + 1, j + 1)
+            }});
+        }
+}
+
+static inline void buildConstraintTables() {
+    if (constraintTablesReady) return;
+
+    for (int lim = 0; lim <= 4; ++lim) {
+        for (int code = 0; code < 243; ++code) {
+            int cur[5];
+            int tmp = code;
+            for (int p = 0; p < 5; ++p) {
+                cur[p] = tmp % 3;
+                tmp /= 3;
+            }
+
+            int possible[5] = {0, 0, 0, 0, 0};
+            bool any = false;
+            for (int mask = 0; mask < 32; ++mask) {
+                int val[5];
+                bool ok = true;
+                for (int p = 0; p < 5; ++p) {
+                    val[p] = (mask & (1 << p)) ? INNER : OUTER;
+                    if (cur[p] != UNKNOWN && cur[p] != val[p]) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (!ok) continue;
+
+                int cnt = 0;
+                for (int p = 1; p < 5; ++p)
+                    cnt += (val[p] != val[0]);
+                if (cnt != lim) continue;
+
+                any = true;
+                for (int p = 0; p < 5; ++p)
+                    possible[p] |= (val[p] == INNER ? 1 : 2);
+            }
+
+            ConstraintResult &res = numberConstraintTable[lim][code];
+            res.valid = any;
+            for (int p = 0; p < 5; ++p) {
+                if (cur[p] == UNKNOWN && (possible[p] == 1 || possible[p] == 2))
+                    res.force[p] = (uint8_t)(possible[p] == 1 ? INNER : OUTER);
+                else
+                    res.force[p] = UNKNOWN;
+            }
+        }
+    }
+
+    for (int code = 0; code < 81; ++code) {
+        int cur[4];
+        int tmp = code;
+        for (int p = 0; p < 4; ++p) {
+            cur[p] = tmp % 3;
+            tmp /= 3;
+        }
+
+        int possible[4] = {0, 0, 0, 0};
+        bool any = false;
+        for (int mask = 0; mask < 16; ++mask) {
+            int val[4];
+            bool ok = true;
+            for (int p = 0; p < 4; ++p) {
+                val[p] = (mask & (1 << p)) ? INNER : OUTER;
+                if (cur[p] != UNKNOWN && cur[p] != val[p]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (!ok) continue;
+
+            int deg = 0;
+            deg += (val[0] != val[1]);
+            deg += (val[1] != val[3]);
+            deg += (val[2] != val[3]);
+            deg += (val[0] != val[2]);
+            if (deg != 0 && deg != 2) continue;
+
+            any = true;
+            for (int p = 0; p < 4; ++p)
+                possible[p] |= (val[p] == INNER ? 1 : 2);
+        }
+
+        ConstraintResult &res = vertexConstraintTable[code];
+        res.valid = any;
+        for (int p = 0; p < 4; ++p) {
+            if (cur[p] == UNKNOWN && (possible[p] == 1 || possible[p] == 2))
+                res.force[p] = (uint8_t)(possible[p] == 1 ? INNER : OUTER);
+            else
+                res.force[p] = UNKNOWN;
+        }
+        res.force[4] = UNKNOWN;
+    }
+
+    constraintTablesReady = true;
 }
 
 // 寻找 now 里面第一个为 sta 的状态
@@ -301,7 +437,10 @@ static inline void finishLocalCluster(LocalCluster &cluster) {
                 }
             }
         }
-        if (ok) cluster.masks.push_back(mask);
+        if (ok) {
+            cluster.masks.push_back(mask);
+            cluster.outerMasks.push_back((~mask) & cluster.allBits);
+        }
     }
 }
 
@@ -572,98 +711,38 @@ static inline bool isDiff(const Slither &now, int i, int j, int i0, int j0) {
     return a != UNKNOWN && b != UNKNOWN && a != b;
 }
 
-static inline int statusMask(Status sta) {
-    return sta == INNER ? 1 : 2;
-}
-
-static inline Status maskStatus(int mask) {
-    return mask == 1 ? INNER : OUTER;
-}
-
-static inline bool applyNumberConstraint(Slither &now, int i, int j, bool &cg) {
-    array<size_t, 5> ids = {
-        ID(i, j),
-        ID(i, j + 1),
-        ID(i + 1, j),
-        ID(i, j - 1),
-        ID(i - 1, j)
-    };
-    int possible[5] = {0, 0, 0, 0, 0};
-    const int lim = board[i][j] - '0';
-    bool any = false;
-
-    for (int mask = 0; mask < 32; ++mask) {
-        Status val[5];
-        bool ok = true;
-        for (int p = 0; p < 5; ++p) {
-            val[p] = (mask & (1 << p)) ? INNER : OUTER;
-            Status cur = now[ids[p]];
-            if (cur != UNKNOWN && cur != val[p]) {
-                ok = false;
-                break;
-            }
-        }
-        if (!ok) continue;
-
-        int cnt = 0;
-        for (int p = 1; p < 5; ++p)
-            cnt += (val[p] != val[0]);
-        if (cnt != lim) continue;
-
-        any = true;
-        for (int p = 0; p < 5; ++p)
-            possible[p] |= statusMask(val[p]);
-    }
-
-    if (!any) return false;
+static inline bool applyNumberConstraint(Slither &now, const NumberConstraint &constraint, bool &cg) {
+    const auto &ids = constraint.ids;
+    int code = 0;
+    int mul = 1;
     for (int p = 0; p < 5; ++p) {
-        if (now[ids[p]] == UNKNOWN && (possible[p] == 1 || possible[p] == 2)) {
-            now[ids[p]] = maskStatus(possible[p]);
+        code += (int)now[ids[p]] * mul;
+        mul *= 3;
+    }
+    const ConstraintResult &res = numberConstraintTable[constraint.lim][code];
+    if (!res.valid) return false;
+    for (int p = 0; p < 5; ++p) {
+        if (res.force[p] != UNKNOWN) {
+            now[ids[p]] = (Status)res.force[p];
             cg = true;
         }
     }
     return true;
 }
 
-static inline bool applyVertexConstraint(Slither &now, int i, int j, bool &cg) {
-    array<size_t, 4> ids = {
-        ID(i, j),
-        ID(i, j + 1),
-        ID(i + 1, j),
-        ID(i + 1, j + 1)
-    };
-    int possible[4] = {0, 0, 0, 0};
-    bool any = false;
-
-    for (int mask = 0; mask < 16; ++mask) {
-        Status val[4];
-        bool ok = true;
-        for (int p = 0; p < 4; ++p) {
-            val[p] = (mask & (1 << p)) ? INNER : OUTER;
-            Status cur = now[ids[p]];
-            if (cur != UNKNOWN && cur != val[p]) {
-                ok = false;
-                break;
-            }
-        }
-        if (!ok) continue;
-
-        int deg = 0;
-        deg += (val[0] != val[1]);
-        deg += (val[1] != val[3]);
-        deg += (val[2] != val[3]);
-        deg += (val[0] != val[2]);
-        if (deg != 0 && deg != 2) continue;
-
-        any = true;
-        for (int p = 0; p < 4; ++p)
-            possible[p] |= statusMask(val[p]);
-    }
-
-    if (!any) return false;
+static inline bool applyVertexConstraint(Slither &now, const VertexConstraint &constraint, bool &cg) {
+    const auto &ids = constraint.ids;
+    int code = 0;
+    int mul = 1;
     for (int p = 0; p < 4; ++p) {
-        if (now[ids[p]] == UNKNOWN && (possible[p] == 1 || possible[p] == 2)) {
-            now[ids[p]] = maskStatus(possible[p]);
+        code += (int)now[ids[p]] * mul;
+        mul *= 3;
+    }
+    const ConstraintResult &res = vertexConstraintTable[code];
+    if (!res.valid) return false;
+    for (int p = 0; p < 4; ++p) {
+        if (res.force[p] != UNKNOWN) {
+            now[ids[p]] = (Status)res.force[p];
             cg = true;
         }
     }
@@ -682,12 +761,15 @@ static inline bool applyLocalClusterConstraint(Slither &now, const LocalCluster 
     uint64_t possibleInner = 0;
     uint64_t possibleOuter = 0;
     bool any = false;
-    for (uint64_t mask : cluster.masks) {
+    const size_t maskCount = cluster.masks.size();
+    for (size_t idx = 0; idx < maskCount; ++idx) {
+        uint64_t mask = cluster.masks[idx];
+        uint64_t outerMask = cluster.outerMasks[idx];
         if ((mask & knownOuter) != 0) continue;
-        if (((~mask) & knownInner) != 0) continue;
+        if ((outerMask & knownInner) != 0) continue;
         any = true;
         possibleInner |= mask;
-        possibleOuter |= (~mask) & cluster.allBits;
+        possibleOuter |= outerMask;
     }
     if (!any) return false;
 
@@ -711,11 +793,11 @@ static inline bool applyRules(Slither &now) {
     while(cg) {
         cg = false;
         if (runGeneric || eagerGeneric) {
-            for (auto [i, j] : numberedCells) {
-                if (!applyNumberConstraint(now, i, j, cg)) return false;
+            for (const auto &constraint : numberConstraints) {
+                if (!applyNumberConstraint(now, constraint, cg)) return false;
             }
-            for (auto [i, j] : vertexCells) {
-                if (!applyVertexConstraint(now, i, j, cg)) return false;
+            for (const auto &constraint : vertexConstraints) {
+                if (!applyVertexConstraint(now, constraint, cg)) return false;
             }
             if (n >= kClusterMinSize && m >= kClusterMinSize &&
                 n <= kLookaheadMaxSize && m <= kLookaheadMaxSize) {
@@ -1440,7 +1522,7 @@ static inline BranchChoice chooseBranch(Slither &now, int depth) {
         orderBranchCandidates(cur.cand, cur.cnt, depth);
         if (betterLookaheadChoice(cur, choice)) {
             choice = std::move(cur);
-            if (choice.cnt == 0) break;
+            if (choice.cnt <= 1) break;
         }
     }
     return choice;
