@@ -839,10 +839,10 @@ static inline bool applyLocalClusterConstraint(Slither &now, const LocalCluster 
     for (int p = 0; p < cluster.cnt; ++p) {
         Status &cur = now[cluster.ids[p]];
         if (cur != UNKNOWN) continue;
-        bool canInner = (possibleInner >> p) & 1;
-        bool canOuter = (possibleOuter >> p) & 1;
-        if (canInner == canOuter) continue;
-        if (!forceStatusById(now, cluster.ids[p], canInner ? INNER : OUTER, cg))
+        uint64_t innerBit = (possibleInner >> p) & 1ULL;
+        uint64_t outerBit = (possibleOuter >> p) & 1ULL;
+        if (innerBit == outerBit) continue;
+        if (!forceStatusById(now, cluster.ids[p], innerBit ? INNER : OUTER, cg))
             return false;
     }
     return true;
