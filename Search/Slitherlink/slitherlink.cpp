@@ -87,6 +87,22 @@ static constexpr int kLookaheadTopDeep = SLINK_LOOKAHEAD_TOP_DEEP;
 #define SLINK_RECT_CLUSTER_MAX_MASKS 36
 #endif
 static constexpr size_t kRectClusterMaxMasks = SLINK_RECT_CLUSTER_MAX_MASKS;
+#ifndef SLINK_DENSE_ROW_MIN_NUMERATOR
+#define SLINK_DENSE_ROW_MIN_NUMERATOR 9
+#endif
+#ifndef SLINK_DENSE_ROW_MIN_DENOMINATOR
+#define SLINK_DENSE_ROW_MIN_DENOMINATOR 10
+#endif
+static constexpr size_t kDenseRowMinNumerator = SLINK_DENSE_ROW_MIN_NUMERATOR;
+static constexpr size_t kDenseRowMinDenominator = SLINK_DENSE_ROW_MIN_DENOMINATOR;
+#ifndef SLINK_CLUSTER_SKIP_DENSE_NUMERATOR
+#define SLINK_CLUSTER_SKIP_DENSE_NUMERATOR 7
+#endif
+#ifndef SLINK_CLUSTER_SKIP_DENSE_DENOMINATOR
+#define SLINK_CLUSTER_SKIP_DENSE_DENOMINATOR 10
+#endif
+static constexpr size_t kClusterSkipDenseNumerator = SLINK_CLUSTER_SKIP_DENSE_NUMERATOR;
+static constexpr size_t kClusterSkipDenseDenominator = SLINK_CLUSTER_SKIP_DENSE_DENOMINATOR;
 
 // ===== 全局尺寸（供 ID 宏使用） =====
 int n, m;
@@ -220,6 +236,7 @@ static inline void addBoundary(const vector<string> &_board) {
     numberedCells.reserve((size_t)n * m);
     numberConstraints.clear();
     numberConstraints.reserve((size_t)n * m);
+    localClusters.clear();
     zeroClues = 0;
     FORCELL {
         if (board[i][j] != '.') {
@@ -257,6 +274,17 @@ static inline bool isBoardId(size_t id) {
     int i = (int)(id / W);
     int j = (int)(id % W);
     return i >= 1 && i <= n && j >= 1 && j <= m;
+}
+
+static inline bool isDenseClueBoard() {
+    return numberedCells.size() * kClusterSkipDenseDenominator >=
+           (size_t)n * (size_t)m * kClusterSkipDenseNumerator;
+}
+
+static inline bool isMediumDenseClueBoard() {
+    const size_t total = (size_t)n * (size_t)m;
+    const size_t clues = numberedCells.size();
+    return clues * 10 >= total * 6 && clues * 10 < total * 7;
 }
 
 static inline void buildCellConstraintRefs() {
@@ -488,6 +516,9 @@ static inline void finishLocalCluster(LocalCluster &cluster) {
 
 static inline void buildLocalClusters() {
     localClusters.clear();
+    if (isDenseClueBoard()) {
+        return;
+    }
     if (n < kClusterMinSize || m < kClusterMinSize ||
         n > kLookaheadMaxSize || m > kLookaheadMaxSize) {
         return;
@@ -1407,8 +1438,9 @@ struct BranchChoice {
 
 static inline int localConstraintScore(const Slither &now, int i, int j) {
     const bool largeBoardScore = n >= kLargeScoreMinSize || m >= kLargeScoreMinSize;
+    const bool mediumDenseScore = largeBoardScore && isMediumDenseClueBoard();
     const int adjScore = largeBoardScore ? SLINK_SCORE_ADJ : 6;
-    const int numBase = largeBoardScore ? SLINK_SCORE_NUM_BASE : 80;
+    const int numBase = mediumDenseScore ? 500 : (largeBoardScore ? SLINK_SCORE_NUM_BASE : 80);
     const int numUnknownPenalty = largeBoardScore ? SLINK_SCORE_NUM_UNK : 10;
     const int vertexBase = largeBoardScore ? SLINK_SCORE_VERTEX_BASE : 24;
     const int vertexUnknownPenalty = largeBoardScore ? SLINK_SCORE_VERTEX_UNK : 4;
@@ -1457,6 +1489,7 @@ static inline int activeLookaheadTop(int depth) {
         n > kLookaheadMaxSize || m > kLookaheadMaxSize) {
         return 0;
     }
+    if (isMediumDenseClueBoard()) return 0;
     if (n * m < 26 * 26) return kLookaheadTop;
     return depth <= kFullTopDepth ? kLookaheadTopLarge : kLookaheadTopDeep;
 }
@@ -1582,6 +1615,256 @@ static bool solve(Slither now, bool normalized = false, int depth = 0) {
     return false;
 }
 
+// For a fully-clued rectangular board, previous row + current row determines
+// the next row: each clue has only the downward edge left unknown.
+static inline int rowBit(uint64_t row, int j) {
+    if (j < 0 || j >= m) return 0;
+    return (int)((row >> j) & 1ULL);
+}
+
+static inline bool validRowVertex(uint64_t upper, uint64_t lower, int j) {
+    const int a = (j == 0) ? 0 : rowBit(upper, j - 1);
+    const int b = (j == m) ? 0 : rowBit(upper, j);
+    const int c = (j == 0) ? 0 : rowBit(lower, j - 1);
+    const int d = (j == m) ? 0 : rowBit(lower, j);
+    return !(a == d && b == c && a != b);
+}
+
+static inline bool setNextRowBitFromClue(int row, uint64_t prev, uint64_t cur,
+                                         int col, uint64_t &next) {
+    const int center = rowBit(cur, col);
+    int downDiff = board[row][col + 1] - '0';
+    downDiff -= center ^ rowBit(prev, col);
+    downDiff -= center ^ rowBit(cur, col - 1);
+    downDiff -= center ^ rowBit(cur, col + 1);
+    if (downDiff < 0 || downDiff > 1) return false;
+
+    const uint64_t bit = 1ULL << col;
+    if (center ^ downDiff) next |= bit;
+    else next &= ~bit;
+    return true;
+}
+
+static inline bool buildSlitherFromRows(const vector<uint64_t> &rows, Slither &out) {
+    Slither candidate = newSlither();
+    FORCELL {
+        candidate[ID(i, j)] = rowBit(rows[i], j - 1) ? INNER : OUTER;
+    }
+    if (!checkNumber(candidate)) return false;
+    if (!isConnected(candidate)) return false;
+    if (!checkHole(candidate)) return false;
+    out = std::move(candidate);
+    return true;
+}
+
+static bool propagateFullClueRows(uint64_t first, uint64_t second, Slither &out) {
+    vector<uint64_t> rows((size_t)n + 2, 0);
+    rows[1] = first;
+    rows[2] = second;
+
+    for (int row = 2; row <= n; ++row) {
+        for (int j = 0; j <= m; ++j) {
+            if (!validRowVertex(rows[row - 1], rows[row], j))
+                return false;
+        }
+
+        uint64_t next = 0;
+        for (int col = 0; col < m; ++col) {
+            if (!setNextRowBitFromClue(row, rows[row - 1], rows[row], col, next))
+                return false;
+        }
+        rows[row + 1] = next;
+    }
+
+    if (rows[n + 1] != 0) return false;
+    for (int j = 0; j <= m; ++j) {
+        if (!validRowVertex(rows[n], 0, j))
+            return false;
+    }
+
+    return buildSlitherFromRows(rows, out);
+}
+
+static bool trySolveFullClueRows() {
+    if (m > 63 || numberedCells.size() != (size_t)n * (size_t)m) return false;
+
+    static constexpr size_t kFullClueCandidateLimit = 1000000;
+    size_t candidatesSeen = 0;
+    Slither solved;
+
+    auto tryCandidate = [&](uint64_t first, uint64_t second) {
+        ++candidatesSeen;
+        if (propagateFullClueRows(first, second, solved)) {
+            finalAns = std::move(solved);
+            return true;
+        }
+        return false;
+    };
+
+    auto dfs = [&](auto &&self, int pos, uint64_t first, uint64_t second) -> bool {
+        if (candidatesSeen > kFullClueCandidateLimit) return false;
+        if (pos > 0 && !validRowVertex(0, first, pos - 1)) return false;
+        if (pos >= 2 && !setNextRowBitFromClue(1, 0, first, pos - 2, second))
+            return false;
+
+        if (pos == m) {
+            if (!validRowVertex(0, first, m)) return false;
+            if (!setNextRowBitFromClue(1, 0, first, m - 1, second)) return false;
+            return tryCandidate(first, second);
+        }
+
+        if (self(self, pos + 1, first, second)) return true;
+        return self(self, pos + 1, first | (1ULL << pos), second);
+    };
+
+    return dfs(dfs, 0, 0, 0);
+}
+
+static inline bool clueAllowsNextBit(int row, uint64_t prev, uint64_t cur,
+                                     int col, int bit) {
+    char clue = board[row][col + 1];
+    if (clue == '.') return true;
+
+    const int center = rowBit(cur, col);
+    int downDiff = clue - '0';
+    downDiff -= center ^ rowBit(prev, col);
+    downDiff -= center ^ rowBit(cur, col - 1);
+    downDiff -= center ^ rowBit(cur, col + 1);
+    return downDiff >= 0 && downDiff <= 1 && bit == (center ^ downDiff);
+}
+
+static bool generateNextRowsDense(int row, uint64_t prev, uint64_t cur,
+                                  vector<uint64_t> &nextRows,
+                                  size_t &generatedRows,
+                                  size_t generatedLimit) {
+    for (int j = 0; j <= m; ++j)
+        if (!validRowVertex(prev, cur, j)) return true;
+
+    auto dfs = [&](auto &&self, int col, uint64_t next) -> bool {
+        if (col == m) {
+            if (validRowVertex(cur, next, m)) {
+                nextRows.push_back(next);
+                if (++generatedRows > generatedLimit) return false;
+            }
+            return true;
+        }
+
+        for (int bit = 0; bit <= 1; ++bit) {
+            if (!clueAllowsNextBit(row, prev, cur, col, bit)) continue;
+            uint64_t next2 = bit ? (next | (1ULL << col)) : next;
+            if (!validRowVertex(cur, next2, col)) continue;
+            if (!self(self, col + 1, next2)) return false;
+        }
+        return true;
+    };
+
+    return dfs(dfs, 0, 0);
+}
+
+static bool generateInitialDenseRows(vector<pair<uint64_t, uint64_t>> &starts,
+                                     size_t startLimit) {
+    auto appendSecondBit = [&](int col, uint64_t first, uint64_t second,
+                               const auto &continuation) -> bool {
+        for (int bit = 0; bit <= 1; ++bit) {
+            if (!clueAllowsNextBit(1, 0, first, col, bit)) continue;
+            uint64_t second2 = bit ? (second | (1ULL << col)) : second;
+            if (!validRowVertex(first, second2, col)) continue;
+            if (!continuation(second2)) return false;
+        }
+        return true;
+    };
+
+    auto dfs = [&](auto &&self, int pos, uint64_t first, uint64_t second) -> bool {
+        auto afterDelayedSecond = [&](uint64_t secondReady) -> bool {
+            if (pos == m) {
+                auto finish = [&](uint64_t secondFinal) -> bool {
+                    if (!validRowVertex(first, secondFinal, m)) return true;
+                    starts.emplace_back(first, secondFinal);
+                    return starts.size() <= startLimit;
+                };
+                return appendSecondBit(m - 1, first, secondReady, finish);
+            }
+
+            if (!self(self, pos + 1, first, secondReady)) return false;
+            return self(self, pos + 1, first | (1ULL << pos), secondReady);
+        };
+
+        if (pos >= 2)
+            return appendSecondBit(pos - 2, first, second, afterDelayedSecond);
+        return afterDelayedSecond(second);
+    };
+
+    return dfs(dfs, 0, 0, 0);
+}
+
+static bool searchDenseRows(int row, uint64_t prev, uint64_t cur,
+                            vector<uint64_t> &rows,
+                            size_t &statesSeen, size_t stateLimit,
+                            size_t &generatedRows, size_t generatedLimit,
+                            Slither &out) {
+    if (++statesSeen > stateLimit) return false;
+
+    vector<uint64_t> nextRows;
+    nextRows.reserve(8);
+    if (!generateNextRowsDense(row, prev, cur, nextRows, generatedRows, generatedLimit))
+        return false;
+
+    if (row == n) {
+        for (uint64_t next : nextRows) {
+            if (next != 0) continue;
+            rows[n + 1] = 0;
+            if (buildSlitherFromRows(rows, out)) return true;
+        }
+        return false;
+    }
+
+    for (uint64_t next : nextRows) {
+        rows[row + 1] = next;
+        if (searchDenseRows(row + 1, cur, next, rows, statesSeen, stateLimit,
+                            generatedRows, generatedLimit, out))
+            return true;
+    }
+
+    return false;
+}
+
+static bool trySolveDenseRows() {
+    if (m > 63) return false;
+    const size_t totalCells = (size_t)n * (size_t)m;
+    const size_t clueCells = numberedCells.size();
+    if (clueCells == totalCells ||
+        clueCells * kDenseRowMinDenominator < totalCells * kDenseRowMinNumerator) {
+        return false;
+    }
+
+    static constexpr size_t kDenseStartLimit = 200000;
+    static constexpr size_t kDenseStateLimit = 300000;
+    static constexpr size_t kDenseGeneratedLimit = 2000000;
+
+    vector<pair<uint64_t, uint64_t>> starts;
+    starts.reserve(1024);
+    if (!generateInitialDenseRows(starts, kDenseStartLimit)) return false;
+
+    vector<uint64_t> rows((size_t)n + 2, 0);
+    size_t statesSeen = 0;
+    size_t generatedRows = 0;
+    Slither solved;
+
+    for (auto [first, second] : starts) {
+        rows[1] = first;
+        rows[2] = second;
+        if (searchDenseRows(2, first, second, rows, statesSeen,
+                            kDenseStateLimit, generatedRows,
+                            kDenseGeneratedLimit, solved)) {
+            finalAns = std::move(solved);
+            return true;
+        }
+        if (statesSeen > kDenseStateLimit || generatedRows > kDenseGeneratedLimit)
+            return false;
+    }
+    return false;
+}
+
 // === 输出字符画 ===
 static void print_solution_ascii(const vector<string>& puzzle, const Slither& solved) {
     int n = (int)puzzle.size();
@@ -1639,10 +1922,20 @@ static void print_solution_ascii(const vector<string>& puzzle, const Slither& so
 // === 入口 ===
 vector<string> Slitherlink(vector<string> _board){
     addBoundary(_board);
+    finalAns.clear();
+    if (trySolveFullClueRows() || trySolveDenseRows()) {
+        auto ans = _board;
+        FORCELL{
+            ans[i-1][j-1] = (finalAns[ID(i,j)] == INNER) ? '*' : '.';
+        }
+#ifdef LOCAL
+        print_solution_ascii(_board, finalAns);
+#endif
+        return ans;
+    }
     buildLocalClusters();
     auto slither = newSlither();
     initalRules(slither);
-    finalAns.clear();
     if (solve(slither)) {
         auto ans = _board;
         FORCELL{

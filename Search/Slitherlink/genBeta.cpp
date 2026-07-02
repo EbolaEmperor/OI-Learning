@@ -1,4 +1,10 @@
-#include <bits/stdc++.h>
+#include <cstdint>
+#include <cstdlib>
+#include <cmath>
+#include <iostream>
+#include <random>
+#include <string>
+#include <vector>
 using namespace std;
 
 // from permeate.cpp
@@ -7,7 +13,7 @@ vector<vector<uint8_t>> permeate(int H, int W, bool draw = false);
 // from slitherlink.cpp
 int countSol(vector<string> _board);
 
-vector<string> genNumber(vector<string> grid) {
+vector<string> genNumber(vector<string> grid, double keepRate = 0.5) {
     random_device rddd;
     mt19937 rng(rddd() + 114514);
 
@@ -25,10 +31,14 @@ vector<string> genNumber(vector<string> grid) {
             numGrid[i][j] = '0' + cnt;
         }
     }
+    if (keepRate >= 1.0) return numGrid;
 
-    // 在确保解唯一性的前提下删除至少一半的数字
+    // 在确保解唯一性的前提下删除指定比例的数字
+    int totalCells = n * m;
+    int targetKeep = (int)ceil(keepRate * totalCells - 1e-12);
+    int targetDel = totalCells - targetKeep;
     int del_cnt = 0, stop = 0;
-    while (del_cnt < 0.5 * n * m) {
+    while (del_cnt < targetDel) {
         int i, j;
         do {
             i = rng() % n, j = rng() % m;
@@ -59,6 +69,12 @@ int main(int argc, char **argv)
         H = atoi(argv[1]);
         W = atoi(argv[2]);
     }
+    double keepRate = 0.5;
+    if (argc >= 4 && string(argv[3]) == "--full") {
+        keepRate = 1.0;
+    } else if (argc >= 5 && string(argv[3]) == "--keep") {
+        keepRate = atof(argv[4]);
+    }
     auto g = permeate(H, W);
 
     vector<string> gg;
@@ -70,7 +86,7 @@ int main(int argc, char **argv)
         gg.push_back(line);
     }
     
-    auto numGrid = genNumber(gg);
+    auto numGrid = genNumber(gg, keepRate);
     for (auto &s : numGrid)
         cout << s << "\n";
 

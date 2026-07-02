@@ -8,7 +8,16 @@
 //     Forbid the flip if: flips > 2 * num(O) - 4
 // url: https://liamappelbe.medium.com/how-to-generate-slither-link-puzzles-6c65510b2ba1
 
-#include <bits/stdc++.h>
+#include <cmath>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <string>
+#include <sys/stat.h>
+#include <vector>
 #include "pnglib/pnglib.hpp"
 using namespace std;
 
