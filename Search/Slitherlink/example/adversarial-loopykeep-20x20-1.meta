@@ -1,0 +1,7 @@
+id=keep:20x20:45:23
+timeout=True
+elapsed=5.000000
+clues=160
+cells=400
+returncode=None
+confirmed_timeout_30s=True
